@@ -1,0 +1,152 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: 'Montserrat', sans-serif;
+  --font-serif: 'Playfair Display', serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+}
+
+/* LIGHT MODE - Nature & Golden Hour Theme */
+:root {
+  /* Deep Nature Green (Padi di Sawah) */
+  --primary: 142 65% 28%; 
+  --primary-foreground: 0 0% 100%;
+
+  /* Golden Hour / Sunset (Kemakmuran) */
+  --secondary: 35 90% 50%;
+  --secondary-foreground: 0 0% 100%;
+
+  /* Warm Organic Backgrounds */
+  --background: 40 20% 98%; /* Creamy White */
+  --foreground: 140 30% 15%; /* Dark Moss Green Text */
+
+  --card: 0 0% 100%;
+  --card-foreground: 140 30% 15%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 140 30% 15%;
+
+  --muted: 140 20% 94%;
+  --muted-foreground: 140 10% 45%;
+
+  --accent: 142 30% 94%; /* Light Green Tint */
+  --accent-foreground: 142 65% 28%;
+
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+
+  --border: 140 15% 88%;
+  --input: 140 15% 88%;
+  --ring: 142 65% 28%;
+
+  --radius: 0.75rem;
+
+  /* Chart colors inspired by nature */
+  --chart-1: 142 65% 28%; /* Green */
+  --chart-2: 35 90% 50%;  /* Gold */
+  --chart-3: 200 80% 45%; /* Water Blue */
+  --chart-4: 25 85% 55%;  /* Earth Orange */
+  --chart-5: 280 40% 60%; /* Flower Purple */
+}
+
+.dark {
+  --background: 140 30% 8%;
+  --foreground: 40 20% 98%;
+
+  --card: 140 30% 10%;
+  --card-foreground: 40 20% 98%;
+
+  --popover: 140 30% 10%;
+  --popover-foreground: 40 20% 98%;
+
+  --primary: 142 55% 45%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 35 90% 50%;
+  --secondary-foreground: 0 0% 100%;
+
+  --muted: 140 20% 15%;
+  --muted-foreground: 140 10% 70%;
+
+  --accent: 140 20% 15%;
+  --accent-foreground: 40 20% 98%;
+
+  --destructive: 0 62% 30%;
+  --destructive-foreground: 0 0% 98%;
+
+  --border: 140 20% 20%;
+  --input: 140 20% 20%;
+  --ring: 142 55% 45%;
+
+  --chart-1: 142 55% 45%;
+  --chart-2: 35 90% 50%;
+  --chart-3: 200 80% 45%;
+  --chart-4: 25 85% 55%;
+  --chart-5: 280 40% 60%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply font-sans antialiased bg-background text-foreground selection:bg-primary/20 selection:text-primary;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+  
+  /* Smooth Scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  /* Custom Scrollbar for a more premium feel */
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-primary/20 rounded-full hover:bg-primary/40 transition-colors;
+  }
+}
