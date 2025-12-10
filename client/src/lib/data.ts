@@ -16,11 +16,11 @@ import umkmPhoto from "@assets/generated_images/traditional_woven_fabric_for_umk
 // For now we will use placeholders or the existing ones where appropriate
 
 export const siteConfig = {
-  name: "Portal Nagari Sungai Pinang",
+  name: "Portal Nagari",
   tagline: "Membangun Nagari Yang Maju dan Sejahtera",
-  description: "Website resmi Pemerintah Nagari Sungai Pinang, Kabupaten Pasaman Barat.",
+  description: "Website resmi Pemerintah Nagari, Kabupaten Pasaman Barat.",
   contact: {
-    address: "Jl. Raya Sungai Pinang, Kabupaten Pasaman Barat, Sumatera Barat",
+    address: "Jl. Raya Nagari, Kabupaten Pasaman Barat, Sumatera Barat",
     email: "info@sungaipinang.id",
     phone: "+62 756 123456",
     whatsapp: "+62 812 3456 7890",
@@ -34,7 +34,7 @@ export const siteConfig = {
 
 export const heroBanners = [
   {
-    title: "Selamat Datang di Portal Nagari Sungai Pinang",
+    title: "Selamat Datang di Portal Nagari",
     subtitle: "Membangun Nagari Yang Maju dan Sejahtera",
     buttonText: "Pelajari Lebih Lanjut",
     buttonUrl: "/profil",
@@ -124,8 +124,8 @@ export const news = [
     id: 1,
     title: "Musyawarah Nagari Pembahasan RPJM Nagari 2024-2030",
     slug: "musyawarah-nagari-pembahasan-rpjm-nagari-2024-2030",
-    excerpt: "Wali Nagari Sungai Pinang menggelar Musyawarah Nagari untuk membahas Rencana Pembangunan Jangka Menengah Nagari periode 2024-2030.",
-    content: "<p>Pada hari Sabtu, 15 September 2024, Wali Nagari Sungai Pinang menggelar Musyawarah Nagari yang dihadiri oleh seluruh perangkat nagari, ninik mamak, dan perwakilan masyarakat. Agenda utama adalah pembahasan draft RPJM Nagari 2024-2030 yang akan menjadi panduan pembangunan nagari selama 6 tahun ke depan.</p><p>Dalam sambutannya, Wali Nagari menekankan pentingnya partisipasi masyarakat dalam perencanaan pembangunan agar program yang dijalankan benar-benar sesuai dengan kebutuhan riil di lapangan.</p>",
+    excerpt: "Wali Nagari menggelar Musyawarah Nagari untuk membahas Rencana Pembangunan Jangka Menengah Nagari periode 2024-2030.",
+    content: "<p>Pada hari Sabtu, 15 September 2024, Wali Nagari menggelar Musyawarah Nagari yang dihadiri oleh seluruh perangkat nagari, ninik mamak, dan perwakilan masyarakat. Agenda utama adalah pembahasan draft RPJM Nagari 2024-2030 yang akan menjadi panduan pembangunan nagari selama 6 tahun ke depan.</p><p>Dalam sambutannya, Wali Nagari menekankan pentingnya partisipasi masyarakat dalam perencanaan pembangunan agar program yang dijalankan benar-benar sesuai dengan kebutuhan riil di lapangan.</p>",
     category: "Pembangunan",
     categoryColor: "#3B82F6",
     date: "29 Nov 2025",
@@ -139,7 +139,7 @@ export const news = [
     title: "Pembangunan Jalan Nagari Tahap II Dimulai",
     slug: "pembangunan-jalan-nagari-tahap-ii-dimulai",
     excerpt: "Proyek pembangunan jalan nagari tahap II telah dimulai untuk meningkatkan aksesibilitas pertanian.",
-    content: "<p>Pemerintah Nagari Sungai Pinang secara resmi memulai pembangunan jalan usaha tani tahap II. Proyek ini menghubungkan area persawahan di Jorong Timur dengan jalan utama nagari.</p><p>Diharapkan dengan adanya jalan ini, biaya angkut hasil panen petani dapat ditekan sehingga pendapatan petani meningkat.</p>",
+    content: "<p>Pemerintah Nagari secara resmi memulai pembangunan jalan usaha tani tahap II. Proyek ini menghubungkan area persawahan di Jorong Timur dengan jalan utama nagari.</p><p>Diharapkan dengan adanya jalan ini, biaya angkut hasil panen petani dapat ditekan sehingga pendapatan petani meningkat.</p>",
     category: "Pembangunan",
     categoryColor: "#3B82F6",
     date: "26 Nov 2025",
@@ -153,7 +153,7 @@ export const news = [
     title: "Pelatihan Digital Marketing untuk UMKM",
     slug: "pelatihan-digital-marketing-umkm",
     excerpt: "Pemuda nagari mengadakan pelatihan pemasaran digital bagi pelaku usaha mikro.",
-    content: "<p>Karang Taruna Nagari Sungai Pinang bekerja sama dengan Dinas Koperindag mengadakan pelatihan digital marketing. Pelatihan ini diikuti oleh 30 pelaku UMKM di nagari.</p>",
+    content: "<p>Karang Taruna Nagari bekerja sama dengan Dinas Koperindag mengadakan pelatihan digital marketing. Pelatihan ini diikuti oleh 30 pelaku UMKM di nagari.</p>",
     category: "Ekonomi",
     categoryColor: "#10B981",
     date: "20 Nov 2025",
@@ -195,7 +195,7 @@ export const news = [
 export const umkm = [
   {
     id: 1,
-    name: "Songket Sungai Pinang",
+    name: "Songket Nagari",
     category: "Kerajinan",
     description: "Kain tenun songket berkualitas tinggi dengan motif khas daerah. Dibuat dengan alat tenun tradisional oleh pengrajin berpengalaman.",
     price: "Rp 1.500.000",
@@ -207,7 +207,7 @@ export const umkm = [
     id: 2,
     name: "Kopi Robusta Pinang",
     category: "Kuliner",
-    description: "Biji kopi robusta pilihan yang dipetik dari dataran tinggi Sungai Pinang. Memiliki cita rasa kuat dan aroma yang khas.",
+    description: "Biji kopi robusta pilihan yang dipetik dari dataran tinggi Nagari. Memiliki cita rasa kuat dan aroma yang khas.",
     price: "Rp 45.000 / 250gr",
     image: "https://images.unsplash.com/photo-1497935586351-b67a49e012bf?q=80&w=800&auto=format&fit=crop",
     contact: "0813-4567-8901",
@@ -282,7 +282,7 @@ export const documents = [
   },
   {
     id: 2,
-    title: "Profil Nagari Sungai Pinang 2024",
+    title: "Profil Nagari 2024",
     category: "Profil",
     year: 2024,
     size: "5.1 MB",
@@ -345,14 +345,14 @@ export const projects = [
 export const facilities = [
   {
     id: 1,
-    name: "Masjid Raya Sungai Pinang",
+    name: "Masjid Raya Nagari",
     category: "Ibadah",
     address: "Jl. Utama No. 1",
     image: "https://images.unsplash.com/photo-1564121211835-e88c852648ab?q=80&w=800&auto=format&fit=crop"
   },
   {
     id: 2,
-    name: "SDN 01 Sungai Pinang",
+    name: "SDN 01 Nagari",
     category: "Pendidikan",
     address: "Jl. Pendidikan No. 5",
     image: "https://images.unsplash.com/photo-1580582932707-520aed937b7b?q=80&w=800&auto=format&fit=crop"

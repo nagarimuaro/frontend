@@ -14,11 +14,30 @@ import {
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSiteSettings } from "@/lib/api";
+import { API_BASE_URL } from "@/lib/api/endpoints";
+
+// Helper function to get absolute URL for images
+const getAbsoluteUrl = (path: string | undefined): string | undefined => {
+  if (!path) return undefined;
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  return `${API_BASE_URL}${path}`;
+};
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [location] = useLocation();
+  
+  const { data: settingsData } = useSiteSettings();
+  const settings = settingsData?.data;
+  
+  // Extract site name and logo from settings
+  const siteName = settings?.site_name || "Nagari";
+  const siteLogo = getAbsoluteUrl(settings?.site_logo);
+  const siteInitials = siteName.split(' ').map((word: string) => word[0]).join('').substring(0, 2).toUpperCase() || "SP";
 
   useEffect(() => {
     const handleScroll = () => {
@@ -59,12 +78,18 @@ export default function Navbar() {
             <motion.div 
               whileHover={{ rotate: 360 }}
               transition={{ duration: 0.7 }}
-              className="w-10 h-10 bg-gradient-to-br from-primary to-green-700 rounded-xl flex items-center justify-center text-white font-serif font-bold text-xl shadow-lg border border-white/20"
+              className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg border border-white/20 overflow-hidden"
             >
-              SP
+              {siteLogo ? (
+                <img src={siteLogo} alt={siteName} className="w-full h-full object-contain" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-primary to-green-700 flex items-center justify-center text-white font-serif font-bold text-xl">
+                  {siteInitials}
+                </div>
+              )}
             </motion.div>
             <div className={cn("flex flex-col transition-colors duration-300", (scrolled && !isOpen) ? "text-foreground" : "text-white")}>
-              <span className="font-serif font-bold text-lg leading-tight tracking-wide">Sungai Pinang</span>
+              <span className="font-serif font-bold text-lg leading-tight tracking-wide">{siteName}</span>
               <span className={cn("text-[10px] uppercase tracking-[0.2em] font-medium opacity-80", (scrolled && !isOpen) ? "text-primary" : "text-white/80")}>Portal Nagari</span>
             </div>
           </a>

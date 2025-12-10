@@ -1,7 +1,7 @@
 
 import { motion } from "framer-motion";
 import { 
-  MapPin, Phone, Mail, Clock, Send, MessageCircle 
+  MapPin, Phone, Mail, Clock, Send, MessageCircle, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,13 +9,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { 
   Card, CardContent, CardHeader, CardTitle 
 } from "@/components/ui/card";
-import { siteConfig } from "@/lib/data";
+import { useSiteSettings } from "@/lib/api";
 import PageHeader from "@/components/layout/PageHeader";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import contactImage from "@assets/generated_images/hero_background_of_nagari_sungai_pinang.png"; // Reuse hero for now
 
 export default function Contact() {
+  const { data: settingsData, isLoading } = useSiteSettings();
+  const settings = settingsData?.data;
+
+  // Fallback values
+  const contactInfo = {
+    address: settings?.address || settings?.contact?.address || "Kantor Wali Nagari, Kecamatan Koto XI Tarusan",
+    phone: settings?.phone || settings?.contact?.phone || "+62 751 123456",
+    email: settings?.email || settings?.contact?.email || "nagari@sungaipinang.go.id"
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -47,34 +57,40 @@ export default function Contact() {
               </p>
             </div>
 
-            <div className="grid gap-6">
-              {[
-                { icon: MapPin, title: "Alamat Kantor", content: siteConfig.contact.address, detail: "Buka: Senin - Jumat (08:00 - 16:00)" },
-                { icon: Phone, title: "Telepon & WhatsApp", content: siteConfig.contact.phone, detail: "Layanan 24 Jam via WhatsApp" },
-                { icon: Mail, title: "Email Resmi", content: siteConfig.contact.email, detail: "Untuk keperluan administrasi & kerjasama" }
-              ].map((item, index) => (
-                <motion.div
-                  key={index}
-                  whileHover={{ y: -5 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
-                  <Card className="border-none shadow-md bg-white hover:shadow-xl transition-shadow duration-300">
-                    <CardContent className="p-6 flex items-start gap-5">
-                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/10 to-green-50 text-primary flex items-center justify-center shrink-0 border border-primary/10 shadow-sm">
-                        <item.icon size={28} />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-gray-900 text-lg mb-1">{item.title}</h3>
-                        <p className="text-gray-800 font-medium leading-relaxed mb-1">
-                          {item.content}
-                        </p>
-                        <p className="text-sm text-gray-500">{item.detail}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : (
+              <div className="grid gap-6">
+                {[
+                  { icon: MapPin, title: "Alamat Kantor", content: contactInfo.address, detail: "Buka: Senin - Jumat (08:00 - 16:00)" },
+                  { icon: Phone, title: "Telepon & WhatsApp", content: contactInfo.phone, detail: "Layanan 24 Jam via WhatsApp" },
+                  { icon: Mail, title: "Email Resmi", content: contactInfo.email, detail: "Untuk keperluan administrasi & kerjasama" }
+                ].map((item, index) => (
+                  <motion.div
+                    key={index}
+                    whileHover={{ y: -5 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                  >
+                    <Card className="border-none shadow-md bg-white hover:shadow-xl transition-shadow duration-300">
+                      <CardContent className="p-6 flex items-start gap-5">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/10 to-green-50 text-primary flex items-center justify-center shrink-0 border border-primary/10 shadow-sm">
+                          <item.icon size={28} />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-gray-900 text-lg mb-1">{item.title}</h3>
+                          <p className="text-gray-800 font-medium leading-relaxed mb-1">
+                            {item.content}
+                          </p>
+                          <p className="text-sm text-gray-500">{item.detail}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            )}
           </motion.div>
 
           {/* Contact Form */}

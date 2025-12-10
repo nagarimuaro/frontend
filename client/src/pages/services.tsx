@@ -1,7 +1,7 @@
 
 import { motion } from "framer-motion";
 import { 
-  FileText, Clock, CreditCard, ChevronRight, Download, CheckCircle, ArrowRight 
+  FileText, Clock, CreditCard, ChevronRight, Download, CheckCircle, ArrowRight, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -10,13 +10,29 @@ import {
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
-import { services } from "@/lib/data";
+import { useServices } from "@/lib/api";
 import PageHeader from "@/components/layout/PageHeader";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import serviceImage from "@assets/generated_images/customer_service_counter.png"; 
 
 export default function Services() {
+  const { data: servicesData, isLoading } = useServices();
+  const services = servicesData?.data || [];
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="flex items-center justify-center py-32">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <span className="ml-2 text-gray-600">Memuat layanan...</span>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -40,71 +56,88 @@ export default function Services() {
               <span className="text-sm text-gray-500 bg-white px-3 py-1 rounded-full shadow-sm border">Total: {services.length} Layanan</span>
             </div>
             
-            <Accordion type="single" collapsible className="w-full space-y-4">
-              {services.map((service, index) => (
-                <motion.div
-                  key={service.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                >
-                  <AccordionItem value={`item-${service.id}`} className="border border-gray-100 rounded-2xl px-2 bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-                    <AccordionTrigger className="hover:no-underline py-4 px-4 hover:bg-gray-50/50 rounded-xl transition-colors">
-                      <div className="flex items-center gap-4 text-left w-full">
-                        <div className="w-12 h-12 rounded-xl bg-green-50 text-primary flex items-center justify-center shrink-0 shadow-sm border border-green-100">
-                          <service.icon size={22} />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-bold text-gray-900 text-lg">{service.name}</h3>
-                          <div className="flex items-center gap-4 mt-1">
-                            <span className="text-xs text-gray-500 flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded">
-                              <Clock size={10} /> {service.estimatedTime}
-                            </span>
-                            <span className="text-xs text-green-600 font-medium flex items-center gap-1 bg-green-50 px-2 py-0.5 rounded">
-                              <CreditCard size={10} /> {service.fee}
-                            </span>
+            {services.length === 0 ? (
+              <div className="text-center py-12 bg-gray-50 rounded-2xl">
+                <FileText className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                <p className="text-gray-600">Belum ada layanan tersedia</p>
+              </div>
+            ) : (
+              <Accordion type="single" collapsible className="w-full space-y-4">
+                {services.map((service, index) => (
+                  <motion.div
+                    key={service.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <AccordionItem value={`item-${service.id}`} className="border border-gray-100 rounded-2xl px-2 bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                      <AccordionTrigger className="hover:no-underline py-4 px-4 hover:bg-gray-50/50 rounded-xl transition-colors">
+                        <div className="flex items-center gap-4 text-left w-full">
+                          <div className="w-12 h-12 rounded-xl bg-green-50 text-primary flex items-center justify-center shrink-0 shadow-sm border border-green-100">
+                            {service.icon ? (
+                              <img src={service.icon} alt="" className="w-6 h-6" />
+                            ) : (
+                              <FileText size={22} />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-bold text-gray-900 text-lg">{service.name}</h3>
+                            <div className="flex items-center gap-4 mt-1">
+                              <span className="text-xs text-gray-500 flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded">
+                                <Clock size={10} /> {service.estimated_time || "1-3 hari kerja"}
+                              </span>
+                              <span className="text-xs text-green-600 font-medium flex items-center gap-1 bg-green-50 px-2 py-0.5 rounded">
+                                <CreditCard size={10} /> {service.fee || "Gratis"}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="pt-2 pb-6 px-6 border-t border-dashed border-gray-100 mt-2">
-                      <div className="grid md:grid-cols-2 gap-6 mt-4">
-                        <div>
-                          <h4 className="font-bold text-sm mb-3 text-gray-900">Deskripsi Layanan</h4>
-                          <p className="text-gray-600 text-sm leading-relaxed mb-4">{service.description}</p>
-                          <div className="flex gap-3 mt-4">
-                            <Button className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 rounded-full">
-                              Ajukan Sekarang <ArrowRight className="ml-2 w-4 h-4" />
-                            </Button>
-                            <Button variant="outline" className="rounded-full border-gray-200">
-                              <Download className="mr-2 h-4 w-4" /> Formulir
-                            </Button>
+                      </AccordionTrigger>
+                      <AccordionContent className="pt-2 pb-6 px-6 border-t border-dashed border-gray-100 mt-2">
+                        <div className="grid md:grid-cols-2 gap-6 mt-4">
+                          <div>
+                            <h4 className="font-bold text-sm mb-3 text-gray-900">Deskripsi Layanan</h4>
+                            <p className="text-gray-600 text-sm leading-relaxed mb-4">{service.description || "Layanan administrasi dari Kantor Nagari"}</p>
+                            <div className="flex gap-3 mt-4">
+                              <Button className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 rounded-full">
+                                Ajukan Sekarang <ArrowRight className="ml-2 w-4 h-4" />
+                              </Button>
+                              {service.form_url && (
+                                <Button variant="outline" className="rounded-full border-gray-200" asChild>
+                                  <a href={service.form_url} target="_blank" rel="noopener noreferrer">
+                                    <Download className="mr-2 h-4 w-4" /> Formulir
+                                  </a>
+                                </Button>
+                              )}
+                            </div>
                           </div>
+                          
+                          {service.requirements && service.requirements.length > 0 && (
+                            <div className="bg-blue-50/50 p-5 rounded-xl border border-blue-100">
+                              <h4 className="font-bold text-sm mb-3 text-blue-900">Persyaratan Dokumen:</h4>
+                              <ul className="space-y-3">
+                                {service.requirements.map((req: string, i: number) => (
+                                  <motion.li 
+                                    key={i} 
+                                    initial={{ opacity: 0, x: 10 }}
+                                    whileInView={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 0.1 * i }}
+                                    className="flex items-start gap-3 text-sm text-gray-700"
+                                  >
+                                    <CheckCircle size={16} className="text-blue-500 mt-0.5 shrink-0" />
+                                    <span>{req}</span>
+                                  </motion.li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
                         </div>
-                        
-                        <div className="bg-blue-50/50 p-5 rounded-xl border border-blue-100">
-                          <h4 className="font-bold text-sm mb-3 text-blue-900">Persyaratan Dokumen:</h4>
-                          <ul className="space-y-3">
-                            {service.requirements?.map((req: string, i: number) => (
-                              <motion.li 
-                                key={i} 
-                                initial={{ opacity: 0, x: 10 }}
-                                whileInView={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.1 * i }}
-                                className="flex items-start gap-3 text-sm text-gray-700"
-                              >
-                                <CheckCircle size={16} className="text-blue-500 mt-0.5 shrink-0" />
-                                <span>{req}</span>
-                              </motion.li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                </motion.div>
-              ))}
-            </Accordion>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </motion.div>
+                ))}
+              </Accordion>
+            )}
           </motion.div>
 
           {/* Sidebar Info */}

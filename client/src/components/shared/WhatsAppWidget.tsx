@@ -1,11 +1,20 @@
 
-import { MessageCircle } from "lucide-react";
-import { siteConfig } from "@/lib/data";
+import { MessageCircle, Loader2 } from "lucide-react";
+import { useSiteSettings } from "@/lib/api";
 
 export default function WhatsAppWidget() {
+  const { data: settingsResponse, isLoading } = useSiteSettings();
+  const settings = settingsResponse?.data;
+  
+  // Get WhatsApp number from settings
+  const whatsappNumber = settings?.whatsapp || settings?.phone || '6281234567890';
+  const cleanNumber = whatsappNumber.replace(/[^0-9]/g, "");
+  
+  if (isLoading) return null;
+  
   return (
     <a
-      href={`https://wa.me/${siteConfig.contact.whatsapp.replace(/[^0-9]/g, "")}`}
+      href={`https://wa.me/${cleanNumber}`}
       target="_blank"
       rel="noopener noreferrer"
       className="fixed bottom-6 right-6 z-50 group"

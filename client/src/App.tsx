@@ -10,6 +10,7 @@ import Home from "@/pages/home";
 import Profil from "@/pages/profile";
 import Services from "@/pages/services";
 import News from "@/pages/news";
+import NewsDetail from "@/pages/news-detail";
 import UMKM from "@/pages/umkm";
 import Facilities from "@/pages/facilities";
 import PPID from "@/pages/ppid";
@@ -19,6 +20,8 @@ import Projects from "@/pages/projects";
 import PublicData from "@/pages/public-data";
 import Contact from "@/pages/contact";
 import NotFound from "@/pages/not-found";
+import AIServicePopup from "@/components/shared/AIServicePopup";
+import DynamicHead from "@/components/shared/DynamicHead";
 
 // Wrapper for page transitions
 const PageWrapper = ({ children }: { children: React.ReactNode }) => (
@@ -47,6 +50,9 @@ function Router() {
         </Route>
         <Route path="/berita">
           <PageWrapper><News /></PageWrapper>
+        </Route>
+        <Route path="/berita/:slug">
+          <PageWrapper><NewsDetail /></PageWrapper>
         </Route>
         <Route path="/umkm">
           <PageWrapper><UMKM /></PageWrapper>
@@ -82,8 +88,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        <DynamicHead />
         <Toaster />
         <Router />
+        <AIServicePopup />
       </TooltipProvider>
     </QueryClientProvider>
   );

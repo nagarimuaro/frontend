@@ -1,43 +1,33 @@
 
-import { statistics } from "@/lib/data";
+import { useDataOverview } from "@/lib/api";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
-import { useEffect, useState } from "react";
-
-// Counter component for animated numbers
-const Counter = ({ value, suffix }: { value: string, suffix: string }) => {
-  const [count, setCount] = useState(0);
-  // Parse numeric value (removing commas/dots if any for simple counting)
-  const numericValue = parseFloat(value.replace(/[,.]/g, ""));
-  const isDecimal = value.includes(".");
-  
-  // Very basic animation simulation (in a real app, use useSpring or similar)
-  useEffect(() => {
-    let start = 0;
-    const end = numericValue;
-    const duration = 2000;
-    const increment = end / (duration / 16);
-    
-    const timer = setInterval(() => {
-      start += increment;
-      if (start >= end) {
-        setCount(end);
-        clearInterval(timer);
-      } else {
-        setCount(start);
-      }
-    }, 16);
-    
-    return () => clearInterval(timer);
-  }, [numericValue]);
-
-  // Format back for display
-  const displayValue = isDecimal ? count.toFixed(1) : Math.floor(count).toLocaleString();
-
-  return <span>{displayValue}{suffix && <span className="text-sm ml-1 font-normal text-muted-foreground">{suffix}</span>}</span>;
-};
+import { Users, Map, Calendar, Mountain, Wallet, Building2, Loader2 } from "lucide-react";
 
 export default function Statistics() {
+  const { data: overviewResponse, isLoading } = useDataOverview();
+  const overview = overviewResponse?.data;
+
+  // Build statistics array from API data
+  const statistics = overview ? [
+    { label: "Penduduk", value: overview.jumlah_penduduk.toLocaleString(), icon: Users, suffix: "Jiwa" },
+    { label: "Luas Wilayah", value: overview.luas_wilayah, icon: Map, suffix: "km²" },
+    { label: "Jumlah KK", value: overview.jumlah_kk.toLocaleString(), icon: Calendar, suffix: "KK" },
+    { label: "Ketinggian", value: overview.ketinggian.toString(), icon: Mountain, suffix: "mdpl" },
+    { label: "Dana Nagari", value: overview.total_anggaran > 0 ? (overview.total_anggaran / 1000000).toFixed(1) : "-", icon: Wallet, suffix: overview.total_anggaran > 0 ? "M" : "" },
+    { label: "Jorong", value: overview.jumlah_jorong.toString(), icon: Building2, suffix: "Unit" },
+  ] : [];
+
+  if (isLoading) {
+    return (
+      <section className="py-12 -mt-24 relative z-20 px-4 md:px-6">
+        <div className="container mx-auto flex justify-center">
+          <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="py-12 -mt-24 relative z-20 px-4 md:px-6 pointer-events-none">
       <div className="container mx-auto pointer-events-auto">
@@ -58,7 +48,6 @@ export default function Statistics() {
                     <stat.icon size={22} />
                   </div>
                   <h3 className="text-2xl md:text-3xl font-bold text-gray-900 font-serif tracking-tight">
-                    {/* For simplicity using static value here, but wrapped in motion for effect */}
                     {stat.value}
                     <span className="text-xs text-gray-500 font-sans ml-1 font-normal">{stat.suffix}</span>
                   </h3>

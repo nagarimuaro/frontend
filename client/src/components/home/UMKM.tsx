@@ -1,11 +1,44 @@
 
-import { umkm } from "@/lib/data";
-import { ArrowRight, Tag, ShoppingBag, Star } from "lucide-react";
+import { useState } from "react";
+import { ArrowRight, Tag, ShoppingBag, Star, Loader2, Phone, MapPin, User, Clock, Mail, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
 import { motion } from "framer-motion";
+import { useUMKMDirectory } from "@/lib/api";
+import { Link } from "wouter";
 
 export default function UMKM() {
+  const { data: umkmResponse, isLoading } = useUMKMDirectory();
+  // API returns paginated data: response.data.data is the array
+  const umkmList = umkmResponse?.data?.data?.slice(0, 6) || [];
+  const [selectedUMKM, setSelectedUMKM] = useState<any | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const handleOpenDetail = (item: any, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedUMKM(item);
+    setIsDialogOpen(true);
+  };
+
+  if (isLoading) {
+    return (
+      <section className="py-24 bg-[#0F172A] text-white overflow-hidden relative">
+        <div className="container mx-auto px-4 flex items-center justify-center min-h-[400px]">
+          <Loader2 className="w-12 h-12 animate-spin text-secondary" />
+        </div>
+      </section>
+    );
+  }
+
+  if (umkmList.length === 0) {
+    return null;
+  }
+
   return (
     <section className="py-24 bg-[#0F172A] text-white overflow-hidden relative">
       {/* Background Patterns */}
@@ -39,14 +72,16 @@ export default function UMKM() {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
           >
-            <Button className="bg-white text-slate-900 hover:bg-secondary hover:text-white transition-all rounded-full h-12 px-8 font-bold text-lg shadow-lg hover:shadow-secondary/50 hidden md:flex gap-2 group">
-              Lihat Katalog UMKM <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-            </Button>
+            <Link href="/umkm">
+              <Button className="bg-white text-slate-900 hover:bg-secondary hover:text-white transition-all rounded-full h-12 px-8 font-bold text-lg shadow-lg hover:shadow-secondary/50 hidden md:flex gap-2 group">
+                Lihat Katalog UMKM <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
           </motion.div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {umkm.map((item, index) => (
+          {umkmList.map((item, index) => (
             <motion.div
               key={item.id}
               initial={{ opacity: 0, y: 30 }}
@@ -54,19 +89,30 @@ export default function UMKM() {
               viewport={{ once: true }}
               transition={{ delay: index * 0.1 }}
             >
-              <div className="group bg-slate-800/50 backdrop-blur-sm rounded-[2rem] overflow-hidden hover:ring-2 hover:ring-secondary/50 transition-all duration-500 border border-white/5 hover:-translate-y-2 shadow-xl">
-                <div className="aspect-[4/3] overflow-hidden relative">
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-60 z-10" />
-                  <img 
-                    src={item.image} 
-                    alt={item.name}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  />
-                  <div className="absolute top-4 right-4 z-20">
-                    <Badge className="bg-black/40 hover:bg-black/60 backdrop-blur-md text-white border border-white/10 px-3 py-1 text-sm">
-                      {item.category}
-                    </Badge>
-                  </div>
+              <div 
+                className="group bg-slate-800/50 backdrop-blur-sm rounded-[2rem] overflow-hidden hover:ring-2 hover:ring-secondary/50 transition-all duration-500 border border-white/5 hover:-translate-y-2 shadow-xl cursor-pointer"
+                onClick={(e) => handleOpenDetail(item, e)}
+              >
+                  <div className="aspect-[4/3] overflow-hidden relative">
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-60 z-10" />
+                    {item.foto ? (
+                      <img 
+                        src={item.foto} 
+                        alt={item.nama_usaha}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      />
+                    ) : (
+                      <img 
+                        src={`https://source.unsplash.com/800x600/?${encodeURIComponent(item.jenis_usaha || 'business')},shop`} 
+                        alt={item.nama_usaha}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      />
+                    )}
+                    <div className="absolute top-4 right-4 z-20">
+                      <Badge className="bg-black/40 hover:bg-black/60 backdrop-blur-md text-white border border-white/10 px-3 py-1 text-sm">
+                        {item.jenis_usaha || 'UMKM'}
+                      </Badge>
+                    </div>
                   
                   {/* Quick Action Overlay */}
                   <div className="absolute inset-0 bg-secondary/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 backdrop-blur-sm">
@@ -79,7 +125,7 @@ export default function UMKM() {
                 <div className="p-8">
                   <div className="flex justify-between items-start mb-3">
                     <h3 className="text-2xl font-bold font-serif text-white group-hover:text-secondary transition-colors leading-tight">
-                      {item.name}
+                      {item.nama_usaha}
                     </h3>
                   </div>
                   
@@ -91,13 +137,15 @@ export default function UMKM() {
                   </div>
 
                   <p className="text-slate-400 text-sm mb-6 line-clamp-2 leading-relaxed">
-                    {item.description}
+                    {item.produk}
                   </p>
                   
                   <div className="flex justify-between items-center pt-6 border-t border-white/10">
                     <div>
-                        <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Harga Mulai</p>
-                        <span className="text-secondary font-bold text-xl">{item.price}</span>
+                        <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Pemilik</p>
+                        <span className="text-secondary font-bold text-lg">
+                          {item.pemilik?.nama || 'Hubungi Kami'}
+                        </span>
                     </div>
                     <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-secondary group-hover:text-white transition-colors cursor-pointer">
                         <ArrowRight size={20} className="-rotate-45 group-hover:rotate-0 transition-transform duration-300" />
@@ -110,11 +158,133 @@ export default function UMKM() {
         </div>
         
         <div className="mt-12 text-center md:hidden">
-          <Button className="w-full bg-white text-slate-900 font-bold h-12 rounded-full">
-            Lihat Katalog UMKM
-          </Button>
+          <Link href="/umkm">
+            <Button className="w-full bg-white text-slate-900 font-bold h-12 rounded-full">
+              Lihat Katalog UMKM
+            </Button>
+          </Link>
         </div>
       </div>
+
+      {/* UMKM Detail Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 rounded-3xl">
+          {selectedUMKM && (
+            <>
+              {/* Header Image */}
+              <div className="relative h-64 bg-gradient-to-br from-primary/20 to-primary/40">
+                {selectedUMKM.foto ? (
+                  <img 
+                    src={selectedUMKM.foto} 
+                    alt={selectedUMKM.nama_usaha} 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <img 
+                    src={`https://source.unsplash.com/800x600/?${encodeURIComponent(selectedUMKM.jenis_usaha || 'business')},shop`} 
+                    alt={selectedUMKM.nama_usaha}
+                    className="w-full h-full object-cover"
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                <div className="absolute bottom-4 left-6 right-6">
+                  <Badge className="bg-primary text-white border-none shadow-md px-4 py-1.5 mb-3">
+                    {selectedUMKM.jenis_usaha || 'UMKM'}
+                  </Badge>
+                  <h2 className="text-2xl md:text-3xl font-serif font-bold text-white leading-tight">
+                    {selectedUMKM.nama_usaha}
+                  </h2>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 md:p-8 space-y-6">
+                {/* Rating */}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    {[1,2,3,4,5].map(i => (
+                      <Star key={i} size={16} className="fill-secondary text-secondary" />
+                    ))}
+                  </div>
+                  <span className="text-sm text-gray-500">(4.8) • Produk Terverifikasi</span>
+                </div>
+
+                {/* Deskripsi Produk */}
+                <div className="space-y-2">
+                  <h3 className="font-bold text-gray-900">Produk / Layanan</h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    {selectedUMKM.produk || selectedUMKM.deskripsi || 'Produk UMKM lokal berkualitas dari Nagari.'}
+                  </p>
+                </div>
+
+                {/* Info Pemilik */}
+                <div className="bg-gray-50 p-4 rounded-2xl space-y-3">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                    <User size={18} className="text-primary" /> Informasi Pemilik
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="flex items-center gap-3 text-sm">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User size={18} className="text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-gray-500 text-xs">Nama Pemilik</p>
+                        <p className="font-medium text-gray-900">{selectedUMKM.pemilik?.nama || selectedUMKM.nama_pemilik || '-'}</p>
+                      </div>
+                    </div>
+                    {selectedUMKM.no_hp && (
+                      <div className="flex items-center gap-3 text-sm">
+                        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                          <Phone size={18} className="text-green-600" />
+                        </div>
+                        <div>
+                          <p className="text-gray-500 text-xs">No. Telepon</p>
+                          <p className="font-medium text-gray-900">{selectedUMKM.no_hp}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Alamat */}
+                <div className="bg-gray-50 p-4 rounded-2xl space-y-3">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                    <MapPin size={18} className="text-primary" /> Lokasi Usaha
+                  </h3>
+                  <p className="text-gray-600 text-sm">
+                    {selectedUMKM.alamat || 'Nagari, Kecamatan Koto XI Tarusan'}
+                  </p>
+                  {selectedUMKM.jorong && (
+                    <Badge variant="outline" className="text-xs">
+                      Jorong {selectedUMKM.jorong}
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-100">
+                  <a 
+                    href={`https://wa.me/${selectedUMKM.no_hp?.replace(/[^0-9]/g, '')}?text=Halo, saya tertarik dengan produk ${selectedUMKM.nama_usaha}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex-1"
+                  >
+                    <Button className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl h-12 font-bold shadow-lg">
+                      <Phone size={18} className="mr-2" /> Hubungi via WhatsApp
+                    </Button>
+                  </a>
+                  <Link href="/umkm" className="flex-1">
+                    <Button variant="outline" className="w-full rounded-xl h-12 font-medium border-gray-200" onClick={() => setIsDialogOpen(false)}>
+                      Lihat Semua UMKM
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
     </section>
   );
 }

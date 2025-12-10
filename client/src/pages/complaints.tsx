@@ -1,7 +1,7 @@
 
 import { motion } from "framer-motion";
 import { 
-  AlertTriangle, Send, CheckCircle2 
+  AlertTriangle, Send, CheckCircle2, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,12 +12,18 @@ import {
 import { 
   Card, CardContent, CardHeader, CardTitle, CardDescription 
 } from "@/components/ui/card";
+import { useComplaintCategories, useComplaintStats } from "@/lib/api";
 import PageHeader from "@/components/layout/PageHeader";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import complaintImage from "@assets/generated_images/customer_service_counter.png"; // Reuse service image
 
 export default function Complaints() {
+  const { data: categoriesData, isLoading: categoriesLoading } = useComplaintCategories();
+  const { data: statsData } = useComplaintStats();
+  
+  const categories = categoriesData?.data || [];
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -58,14 +64,26 @@ export default function Complaints() {
                     <label className="text-sm font-medium">Kategori Pengaduan</label>
                     <Select>
                       <SelectTrigger>
-                        <SelectValue placeholder="Pilih kategori" />
+                        <SelectValue placeholder={categoriesLoading ? "Memuat..." : "Pilih kategori"} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="infrastruktur">Infrastruktur & Pembangunan</SelectItem>
-                        <SelectItem value="layanan">Pelayanan Publik</SelectItem>
-                        <SelectItem value="sosial">Bantuan Sosial</SelectItem>
-                        <SelectItem value="keamanan">Keamanan & Ketertiban</SelectItem>
-                        <SelectItem value="lainnya">Lainnya</SelectItem>
+                        {categoriesLoading ? (
+                          <SelectItem value="loading" disabled>Memuat...</SelectItem>
+                        ) : categories.length > 0 && categories[0]?.id ? (
+                          categories.map((cat) => (
+                            <SelectItem key={cat.id || cat} value={cat.slug || cat.id?.toString() || String(cat)}>
+                              {cat.name || cat}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <>
+                            <SelectItem value="infrastruktur">Infrastruktur & Pembangunan</SelectItem>
+                            <SelectItem value="layanan">Pelayanan Publik</SelectItem>
+                            <SelectItem value="sosial">Bantuan Sosial</SelectItem>
+                            <SelectItem value="keamanan">Keamanan & Ketertiban</SelectItem>
+                            <SelectItem value="lainnya">Lainnya</SelectItem>
+                          </>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>

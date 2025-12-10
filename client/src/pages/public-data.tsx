@@ -1,26 +1,75 @@
 
 import { motion } from "framer-motion";
 import { 
-  Users, BarChart3, PieChart, TrendingUp, Building2, Map, ArrowUpRight 
+  Users, BarChart3, PieChart, TrendingUp, Building2, Map, ArrowUpRight, Loader2 
 } from "lucide-react";
 import { 
   Card, CardContent, CardHeader, CardTitle, CardDescription 
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { publicData } from "@/lib/data";
+import { useDataOverview, useNagariStats, useNagariProfile } from "@/lib/api";
 import PageHeader from "@/components/layout/PageHeader";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import statsImage from "@assets/generated_images/digital_map_of_village.png"; // Placeholder
 
 export default function PublicData() {
+  const { data: overviewResponse, isLoading: loadingOverview } = useDataOverview();
+  const { data: statsResponse, isLoading: loadingStats } = useNagariStats();
+  const { data: profileResponse, isLoading: loadingProfile } = useNagariProfile();
+
+  const overview = overviewResponse?.data;
+  const stats = statsResponse?.data;
+  const profile = profileResponse?.data;
+
+  const isLoading = loadingOverview || loadingStats || loadingProfile;
+
+  // Fallback data from API or defaults
+  const population = {
+    total: overview?.total_population || stats?.population?.total || 5234,
+    male: overview?.male_population || stats?.population?.male || 2567,
+    female: overview?.female_population || stats?.population?.female || 2667,
+    families: overview?.total_families || stats?.population?.families || 1542
+  };
+
+  const education = stats?.education || [
+    { name: "SD/Sederajat", value: 15 },
+    { name: "SMP/Sederajat", value: 25 },
+    { name: "SMA/Sederajat", value: 35 },
+    { name: "Diploma/Sarjana", value: 20 },
+    { name: "Pasca Sarjana", value: 5 },
+  ];
+
+  const jobs = stats?.jobs || [
+    { name: "Petani", value: 45, color: "#22c55e" },
+    { name: "Pedagang", value: 20, color: "#3b82f6" },
+    { name: "PNS/ASN", value: 10, color: "#a855f7" },
+    { name: "Wiraswasta", value: 15, color: "#f97316" },
+    { name: "Lainnya", value: 10, color: "#6b7280" },
+  ];
+
+  const areaSize = profile?.area || overview?.area || "12.5";
+  const budget = stats?.budget || overview?.budget || "1.2 M";
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background font-sans">
+        <Navbar />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-12 h-12 animate-spin text-primary" />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background font-sans">
       <Navbar />
       <PageHeader 
         title="Data Publik & Statistik" 
-        description="Dashboard data kependudukan, sosial, dan ekonomi Nagari Sungai Pinang yang transparan dan akuntabel."
+        description="Dashboard data kependudukan, sosial, dan ekonomi Nagari yang transparan dan akuntabel."
         image={statsImage}
       />
       
@@ -29,7 +78,7 @@ export default function PublicData() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
           <StatCard 
             title="Total Penduduk" 
-            value={publicData.population.total.toLocaleString()} 
+            value={population.total.toLocaleString()} 
             icon={Users} 
             description="Jiwa"
             trend="+1.2%"
@@ -38,7 +87,7 @@ export default function PublicData() {
           />
           <StatCard 
             title="Kepala Keluarga" 
-            value={publicData.population.families.toLocaleString()} 
+            value={population.families.toLocaleString()} 
             icon={Building2} 
             description="KK"
             trend="+0.5%"
@@ -47,7 +96,7 @@ export default function PublicData() {
           />
           <StatCard 
             title="Luas Wilayah" 
-            value="12.5" 
+            value={areaSize} 
             icon={Map} 
             description="km²"
             trend="Tetap"
@@ -56,7 +105,7 @@ export default function PublicData() {
           />
           <StatCard 
             title="Anggaran Desa" 
-            value="1.2 M" 
+            value={budget} 
             icon={TrendingUp} 
             description="Tahun 2025"
             trend="+5%"
@@ -86,13 +135,13 @@ export default function PublicData() {
                   <div className="flex items-end gap-16 h-72 w-full justify-center">
                     <div className="flex flex-col items-center gap-4 w-28 group cursor-pointer">
                       <div className="flex flex-col items-center">
-                         <span className="font-bold text-3xl text-blue-600 mb-1">{publicData.population.male}</span>
+                         <span className="font-bold text-3xl text-blue-600 mb-1">{population.male.toLocaleString()}</span>
                          <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Jiwa</span>
                       </div>
                       <div className="w-full bg-blue-50 rounded-2xl relative h-56 overflow-hidden border border-blue-100 group-hover:shadow-lg group-hover:shadow-blue-200/50 transition-all">
                          <motion.div 
                            initial={{ height: 0 }} 
-                           whileInView={{ height: "49%" }} 
+                           whileInView={{ height: `${Math.round(population.male / population.total * 100)}%` }} 
                            viewport={{ once: true }}
                            transition={{ duration: 1.5, ease: "easeOut" }}
                            className="absolute bottom-0 w-full bg-blue-500 rounded-b-2xl rounded-t-sm"
@@ -105,13 +154,13 @@ export default function PublicData() {
 
                     <div className="flex flex-col items-center gap-4 w-28 group cursor-pointer">
                       <div className="flex flex-col items-center">
-                         <span className="font-bold text-3xl text-pink-600 mb-1">{publicData.population.female}</span>
+                         <span className="font-bold text-3xl text-pink-600 mb-1">{population.female.toLocaleString()}</span>
                          <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Jiwa</span>
                       </div>
                       <div className="w-full bg-pink-50 rounded-2xl relative h-56 overflow-hidden border border-pink-100 group-hover:shadow-lg group-hover:shadow-pink-200/50 transition-all">
                         <motion.div 
                            initial={{ height: 0 }} 
-                           whileInView={{ height: "51%" }} 
+                           whileInView={{ height: `${Math.round(population.female / population.total * 100)}%` }} 
                            viewport={{ once: true }}
                            transition={{ duration: 1.5, ease: "easeOut" }}
                            className="absolute bottom-0 w-full bg-pink-500 rounded-b-2xl rounded-t-sm"
@@ -148,7 +197,7 @@ export default function PublicData() {
               </CardHeader>
               <CardContent className="p-10">
                 <div className="space-y-8">
-                  {publicData.education.map((item, index) => (
+                  {education.map((item: any, index: number) => (
                     <div key={index} className="space-y-3">
                       <div className="flex justify-between items-end">
                         <span className="font-bold text-gray-700 text-lg">{item.name}</span>
@@ -179,7 +228,7 @@ export default function PublicData() {
                 </CardHeader>
                 <CardContent className="p-8">
                   <div className="space-y-6">
-                    {publicData.jobs.map((job, index) => (
+                    {jobs.map((job: any, index: number) => (
                       <div key={index} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
                         <div className="w-4 h-4 rounded-full shadow-sm ring-4 ring-white" style={{ backgroundColor: job.color }} />
                         <span className="flex-1 text-base font-bold text-gray-700">{job.name}</span>
