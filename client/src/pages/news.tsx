@@ -151,9 +151,9 @@ export default function News() {
                     className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-xl transition-all duration-300 flex flex-col md:flex-row group h-full md:h-[280px]"
                   >
                     <Link href={`/berita/${newsItem.slug}`} className="md:w-5/12 h-64 md:h-auto relative overflow-hidden">
-                      {newsItem.image ? (
+                      {(newsItem.featured_image_url || newsItem.featured_image) ? (
                         <img 
-                          src={newsItem.image} 
+                          src={newsItem.featured_image_url || newsItem.featured_image} 
                           alt={newsItem.title} 
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                         />

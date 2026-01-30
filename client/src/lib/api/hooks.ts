@@ -22,9 +22,14 @@ import type {
   PaginatedResponse,
 } from "./types";
 
-// Generic fetch function
+// Generic fetch function with tenant header
 async function fetchApi<T>(url: string): Promise<T> {
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    headers: {
+      'X-Tenant-ID': '1',  // Default tenant ID for Nagari Portal
+      'Accept': 'application/json',
+    }
+  });
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }

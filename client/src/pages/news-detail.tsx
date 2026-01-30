@@ -68,9 +68,9 @@ export default function NewsDetail() {
       
       {/* Hero Section with Image */}
       <section className="relative h-[50vh] min-h-[400px] overflow-hidden">
-        {news.image ? (
+        {(news.featured_image_url || news.featured_image) ? (
           <img 
-            src={news.image} 
+            src={news.featured_image_url || news.featured_image} 
             alt={news.title} 
             className="w-full h-full object-cover"
           />
@@ -222,9 +222,9 @@ export default function NewsDetail() {
                         <div className="group cursor-pointer">
                           <div className="flex gap-4">
                             <div className="w-20 h-20 rounded-xl overflow-hidden shrink-0 bg-gray-100">
-                              {item.image ? (
+                              {(item.featured_image_url || item.featured_image) ? (
                                 <img 
-                                  src={item.image} 
+                                  src={item.featured_image_url || item.featured_image} 
                                   alt={item.title} 
                                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                                 />

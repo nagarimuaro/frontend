@@ -77,7 +77,7 @@ export default function GIS() {
                 <div className="space-y-2 max-h-32 overflow-y-auto">
                   {jorongs.map((jorong) => (
                     <div key={jorong.id} className="text-sm text-gray-600 p-2 bg-gray-50 rounded-lg">
-                      {jorong.name}
+                      {jorong.nama}
                     </div>
                   ))}
                 </div>
@@ -90,16 +90,28 @@ export default function GIS() {
               </h3>
               <div className="space-y-3 text-sm bg-gray-50 p-4 rounded-xl border border-gray-100">
                 {(webgis?.legend || [
-                  { color: "green", label: "Sawah / Pertanian" },
-                  { color: "yellow", label: "Pemukiman" },
-                  { color: "blue", label: "Sungai / Air" },
-                  { color: "gray", label: "Jalan" }
-                ]).map((item: any, index: number) => (
-                  <div key={index} className="flex items-center gap-3">
-                    <div className={`w-5 h-5 bg-${item.color || 'gray'}-500/20 border-2 border-${item.color || 'gray'}-500 rounded-md`}></div>
-                    <span className="font-medium text-gray-600">{item.label || item}</span>
-                  </div>
-                ))}
+                  { color: "#22c55e", label: "Sawah / Pertanian" },
+                  { color: "#eab308", label: "Pemukiman" },
+                  { color: "#3b82f6", label: "Sungai / Air" },
+                  { color: "#6b7280", label: "Jalan" }
+                ]).map((item: any, index: number) => {
+                  const colorHex = item.color?.startsWith('#') ? item.color : 
+                    item.color === 'green' ? '#22c55e' :
+                    item.color === 'yellow' ? '#eab308' :
+                    item.color === 'blue' ? '#3b82f6' : '#6b7280';
+                  return (
+                    <div key={index} className="flex items-center gap-3">
+                      <div 
+                        className="w-5 h-5 rounded-md border-2" 
+                        style={{ 
+                          backgroundColor: `${colorHex}33`, 
+                          borderColor: colorHex 
+                        }}
+                      />
+                      <span className="font-medium text-gray-600">{item.label || item}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
             
@@ -149,16 +161,16 @@ export default function GIS() {
                   transition={{ delay: 1 }}
                   className="absolute bottom-6 left-6 bg-white/90 backdrop-blur-md p-4 rounded-xl shadow-xl max-w-xs border border-white/20 hidden md:block"
                 >
-                  <h4 className="font-bold text-gray-900 text-sm">{profile?.name || 'Nagari'}</h4>
+                  <h4 className="font-bold text-gray-900 text-sm">{profile?.nama_nagari || 'Nagari'}</h4>
                   <p className="text-xs text-gray-500 mt-1">
-                    Latitude: {webgis?.latitude || profile?.latitude || '-0.9345'} | Longitude: {webgis?.longitude || profile?.longitude || '100.3551'}
+                    Latitude: {profile?.koordinat?.lat || webgis?.center?.lat || '-0.9345'} | Longitude: {profile?.koordinat?.lng || webgis?.center?.lng || '100.3551'}
                   </p>
                   <div className="flex gap-2 mt-3">
                     <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                      Luas: {webgis?.area || profile?.area || '12.5 km²'}
+                      Luas: {profile?.luas_wilayah || '12.5'} km²
                     </Badge>
                     <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                      Elevasi: {webgis?.elevation || profile?.elevation || '450 mdpl'}
+                      Elevasi: {profile?.ketinggian || '450'} mdpl
                     </Badge>
                   </div>
                 </motion.div>

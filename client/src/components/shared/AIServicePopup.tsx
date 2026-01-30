@@ -14,7 +14,7 @@ export default function AIServicePopup() {
   };
 
   const handleContactAI = () => {
-    const whatsappNumber = siteSettings?.contact_whatsapp?.replace(/[^0-9]/g, "") || "";
+    const whatsappNumber = siteSettings?.contact_whatsapp?.replace(/[^0-9]/g, "") || "6285126290645";
     const message = encodeURIComponent("Halo, saya ingin menggunakan layanan AI Assistant Nagari.");
     window.open(`https://wa.me/${whatsappNumber}?text=${message}`, "_blank");
     handleClose();

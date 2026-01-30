@@ -74,7 +74,7 @@ export default function News() {
               <div className="relative overflow-hidden rounded-[2rem] aspect-[16/10] mb-8 shadow-2xl">
                 <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors z-10" />
                 <img 
-                  src={featured.category?.icon ? `https://cilandak.sintanagari.cloud/storage/${featured.id}/placeholder.jpg` : "https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=800&auto=format&fit=crop"} 
+                  src={featured.featured_image_url || featured.featured_image || "https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=800&auto=format&fit=crop"} 
                   alt={featured.title}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
@@ -123,7 +123,7 @@ export default function News() {
                 <Link href={`/berita/${item.slug}`} className="flex gap-6 items-center w-full">
                   <div className="w-1/3 aspect-[4/3] rounded-2xl overflow-hidden shrink-0 shadow-md relative">
                     <img 
-                      src={`https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=800&auto=format&fit=crop`}
+                      src={item.featured_image_url || item.featured_image || "https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=800&auto=format&fit=crop"}
                       alt={item.title}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />

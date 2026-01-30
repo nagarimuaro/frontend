@@ -7,7 +7,7 @@ export default function WhatsAppWidget() {
   const settings = settingsResponse?.data;
   
   // Get WhatsApp number from settings
-  const whatsappNumber = settings?.whatsapp || settings?.phone || '6281234567890';
+  const whatsappNumber = settings?.whatsapp || '6285126290645';
   const cleanNumber = whatsappNumber.replace(/[^0-9]/g, "");
   
   if (isLoading) return null;

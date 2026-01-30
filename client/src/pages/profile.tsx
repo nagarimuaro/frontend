@@ -179,7 +179,7 @@ export default function Profil() {
                       <img 
                         src={person.photo} 
                         alt={person.name} 
-                        className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 scale-100 group-hover:scale-110"
+                        className="w-full h-full object-cover transition-all duration-700 scale-100 group-hover:scale-110"
                       />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-primary/30 to-primary/50 flex items-center justify-center">

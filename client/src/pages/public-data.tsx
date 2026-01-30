@@ -25,12 +25,12 @@ export default function PublicData() {
 
   const isLoading = loadingOverview || loadingStats || loadingProfile;
 
-  // Fallback data from API or defaults
+  // Use data from API - field names match backend response
   const population = {
-    total: overview?.total_population || stats?.population?.total || 5234,
-    male: overview?.male_population || stats?.population?.male || 2567,
-    female: overview?.female_population || stats?.population?.female || 2667,
-    families: overview?.total_families || stats?.population?.families || 1542
+    total: overview?.jumlah_penduduk || 0,
+    male: overview?.jumlah_laki_laki || 0,
+    female: overview?.jumlah_perempuan || 0,
+    families: overview?.jumlah_kk || 0
   };
 
   const education = stats?.education || [
@@ -49,8 +49,10 @@ export default function PublicData() {
     { name: "Lainnya", value: 10, color: "#6b7280" },
   ];
 
-  const areaSize = profile?.area || overview?.area || "12.5";
-  const budget = stats?.budget || overview?.budget || "1.2 M";
+  const areaSize = profile?.luas_wilayah || overview?.luas_wilayah || "12.5";
+  const budget = overview?.total_anggaran 
+    ? `${(overview.total_anggaran / 1000000000).toFixed(1)} M` 
+    : "1.2 M";
 
   if (isLoading) {
     return (

@@ -6,6 +6,7 @@ export interface SiteSettings {
   contact_email: string;
   contact_phone: string;
   contact_whatsapp: string;
+  whatsapp?: string;
   seo_keywords: string;
   seo_meta_description: string;
   seo_meta_title: string;
@@ -298,14 +299,28 @@ export interface Facility {
 
 export interface UMKM {
   id: number;
-  name: string;
-  category: string;
-  description: string;
-  price: string;
-  image: string;
-  contact: string;
-  location: string;
-  owner: string;
+  name?: string;
+  nama_usaha: string;
+  jenis_usaha: string;
+  produk: string;
+  deskripsi?: string;
+  foto?: string;
+  image?: string;
+  no_hp?: string;
+  alamat?: string;
+  jorong?: string;
+  nama_pemilik?: string;
+  pemilik?: {
+    id?: number;
+    nama?: string;
+    nik?: string;
+  };
+  category?: string;
+  description?: string;
+  price?: string;
+  contact?: string;
+  location?: string;
+  owner?: string;
 }
 
 // Complaints API Types

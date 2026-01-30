@@ -23,7 +23,7 @@ export const siteConfig = {
     address: "Jl. Raya Nagari, Kabupaten Pasaman Barat, Sumatera Barat",
     email: "info@sungaipinang.id",
     phone: "+62 756 123456",
-    whatsapp: "+62 812 3456 7890",
+    whatsapp: "+62 851 2629 0645",
     social: {
       facebook: "https://facebook.com/nagarisungaipinang",
       instagram: "https://instagram.com/nagarisungaipinang",

@@ -1,6 +1,6 @@
 
-import { useState, useEffect } from "react";
-import { Link, useLocation } from "wouter";
+import { useState, useEffect, useRef } from "react";
+import { Link, useLocation } from "wouter";;
 import { Menu, X, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -30,6 +30,7 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [location] = useLocation();
+  const menuRef = useRef<HTMLDivElement>(null);
   
   const { data: settingsData } = useSiteSettings();
   const settings = settingsData?.data;
@@ -51,6 +52,10 @@ export default function Navbar() {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
+      // Reset menu container scroll to top
+      if (menuRef.current) {
+        menuRef.current.scrollTop = 0;
+      }
     } else {
       document.body.style.overflow = "unset";
     }
@@ -61,15 +66,16 @@ export default function Navbar() {
   const scrolledStyle = "bg-transparent text-foreground hover:bg-primary/5 hover:text-primary focus:bg-primary/5 focus:text-primary data-[active]:bg-primary/5 data-[active]:text-primary data-[state=open]:bg-primary/5 data-[state=open]:text-primary";
 
   return (
+    <>
     <motion.nav
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.5 }}
       className={cn(
-        "fixed top-0 w-full z-50 transition-all duration-500 border-b",
+        "fixed top-0 w-full z-[100] transition-all duration-500",
         scrolled 
-          ? "bg-white/80 backdrop-blur-xl shadow-sm border-white/20 py-3" 
-          : "bg-gradient-to-b from-black/60 to-transparent border-transparent py-5"
+          ? "bg-white/80 backdrop-blur-xl shadow-sm border-b border-gray-200/50 py-3" 
+          : "bg-gradient-to-b from-black/60 to-transparent py-5"
       )}
     >
       <div className="container mx-auto px-4 md:px-6 flex items-center justify-between">
@@ -199,71 +205,81 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* Mobile Toggle */}
-        <button
-          className={cn(
-            "lg:hidden p-2 rounded-full transition-colors relative z-50",
-            (scrolled && !isOpen) ? "text-gray-900 hover:bg-gray-100" : "text-white hover:bg-white/10"
-          )}
-          onClick={() => setIsOpen(!isOpen)}
-        >
-          {isOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+        {/* Mobile Toggle - hidden placeholder for spacing on mobile */}
+        <div className="lg:hidden w-10 h-10" />
       </div>
-
-      {/* Mobile Fullscreen Menu */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div 
-            initial={{ opacity: 0, clipPath: "circle(0% at 100% 0%)" }}
-            animate={{ opacity: 1, clipPath: "circle(150% at 100% 0%)" }}
-            exit={{ opacity: 0, clipPath: "circle(0% at 100% 0%)" }}
-            transition={{ duration: 0.5, ease: "easeInOut" }}
-            className="fixed inset-0 bg-primary z-40 flex flex-col pt-24 px-6 overflow-y-auto"
-          >
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 pointer-events-none" />
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-            
-            <div className="flex flex-col gap-6 relative z-10 pb-10">
-              <MobileLink href="/" onClick={() => setIsOpen(false)}>Beranda</MobileLink>
-              
-              <MobileSection title="Profil">
-                <MobileLink href="/profil" onClick={() => setIsOpen(false)}>Profil Nagari</MobileLink>
-              </MobileSection>
-
-              <MobileSection title="Pemerintahan">
-                <MobileLink href="/ppid" onClick={() => setIsOpen(false)}>PPID & Dokumen</MobileLink>
-                <MobileLink href="/data-publik" onClick={() => setIsOpen(false)}>Data Publik</MobileLink>
-                <MobileLink href="/proyek" onClick={() => setIsOpen(false)}>Proyek Pembangunan</MobileLink>
-              </MobileSection>
-
-              <MobileSection title="Layanan">
-                <MobileLink href="/layanan" onClick={() => setIsOpen(false)}>Layanan Surat</MobileLink>
-                <MobileLink href="/pengaduan" onClick={() => setIsOpen(false)}>Pengaduan Masyarakat</MobileLink>
-              </MobileSection>
-
-              <MobileSection title="Potensi">
-                <MobileLink href="/umkm" onClick={() => setIsOpen(false)}>UMKM</MobileLink>
-                <MobileLink href="/fasilitas" onClick={() => setIsOpen(false)}>Fasilitas & Wisata</MobileLink>
-                <MobileLink href="/gis" onClick={() => setIsOpen(false)}>Peta Digital (GIS)</MobileLink>
-              </MobileSection>
-
-              <MobileLink href="/berita" onClick={() => setIsOpen(false)}>Berita</MobileLink>
-              <MobileLink href="/kontak" onClick={() => setIsOpen(false)}>Kontak</MobileLink>
-              
-              <Link href="/layanan">
-                <Button 
-                  className="w-full mt-6 bg-white text-primary hover:bg-gray-100 rounded-full h-14 text-lg font-bold shadow-xl"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Akses Layanan Online
-                </Button>
-              </Link>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </motion.nav>
+
+    {/* Mobile Toggle Button - OUTSIDE of motion.nav to avoid stacking context issues */}
+    <button
+      className={cn(
+        "lg:hidden fixed top-4 right-4 p-2 rounded-full transition-colors z-[9999]",
+        isOpen 
+          ? "text-white hover:bg-white/10" 
+          : scrolled 
+            ? "text-gray-900 hover:bg-gray-100" 
+            : "text-white hover:bg-white/10"
+      )}
+      onClick={() => setIsOpen(!isOpen)}
+      style={{ pointerEvents: 'auto' }}
+    >
+      {isOpen ? <X size={24} /> : <Menu size={24} />}
+    </button>
+
+    {/* Mobile Fullscreen Menu - OUTSIDE of motion.nav */}
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div 
+          ref={menuRef}
+          initial={{ opacity: 0, clipPath: "circle(0% at 100% 0%)" }}
+          animate={{ opacity: 1, clipPath: "circle(150% at 100% 0%)" }}
+          exit={{ opacity: 0, clipPath: "circle(0% at 100% 0%)" }}
+          transition={{ duration: 0.5, ease: "easeInOut" }}
+          className="fixed top-0 left-0 right-0 bottom-0 bg-primary z-[9998] flex flex-col pt-24 px-6 overflow-y-auto"
+        >
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 pointer-events-none" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+          
+          <div className="flex flex-col gap-6 relative z-10 pb-10">
+            <MobileLink href="/" onClick={() => setIsOpen(false)}>Beranda</MobileLink>
+            
+            <MobileSection title="Profil">
+              <MobileLink href="/profil" onClick={() => setIsOpen(false)}>Profil Nagari</MobileLink>
+            </MobileSection>
+
+            <MobileSection title="Pemerintahan">
+              <MobileLink href="/ppid" onClick={() => setIsOpen(false)}>PPID & Dokumen</MobileLink>
+              <MobileLink href="/data-publik" onClick={() => setIsOpen(false)}>Data Publik</MobileLink>
+              <MobileLink href="/proyek" onClick={() => setIsOpen(false)}>Proyek Pembangunan</MobileLink>
+            </MobileSection>
+
+            <MobileSection title="Layanan">
+              <MobileLink href="/layanan" onClick={() => setIsOpen(false)}>Layanan Surat</MobileLink>
+              <MobileLink href="/pengaduan" onClick={() => setIsOpen(false)}>Pengaduan Masyarakat</MobileLink>
+            </MobileSection>
+
+            <MobileSection title="Potensi">
+              <MobileLink href="/umkm" onClick={() => setIsOpen(false)}>UMKM</MobileLink>
+              <MobileLink href="/fasilitas" onClick={() => setIsOpen(false)}>Fasilitas & Wisata</MobileLink>
+              <MobileLink href="/gis" onClick={() => setIsOpen(false)}>Peta Digital (GIS)</MobileLink>
+            </MobileSection>
+
+            <MobileLink href="/berita" onClick={() => setIsOpen(false)}>Berita</MobileLink>
+            <MobileLink href="/kontak" onClick={() => setIsOpen(false)}>Kontak</MobileLink>
+            
+            <Link href="/layanan">
+              <Button 
+                className="w-full mt-6 bg-white text-primary hover:bg-gray-100 rounded-full h-14 text-lg font-bold shadow-xl"
+                onClick={() => setIsOpen(false)}
+              >
+                Akses Layanan Online
+              </Button>
+            </Link>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  </>
   );
 }
 

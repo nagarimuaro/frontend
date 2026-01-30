@@ -27,9 +27,9 @@ export default function UMKM() {
 
   if (isLoading) {
     return (
-      <section className="py-24 bg-[#0F172A] text-white overflow-hidden relative">
+      <section className="py-24 bg-gray-50 overflow-hidden relative">
         <div className="container mx-auto px-4 flex items-center justify-center min-h-[400px]">
-          <Loader2 className="w-12 h-12 animate-spin text-secondary" />
+          <Loader2 className="w-12 h-12 animate-spin text-primary" />
         </div>
       </section>
     );
@@ -40,12 +40,13 @@ export default function UMKM() {
   }
 
   return (
-    <section className="py-24 bg-[#0F172A] text-white overflow-hidden relative">
+    <section className="py-24 bg-gradient-to-b from-white via-gray-50 to-gray-50 overflow-hidden relative">
+      {/* Top gradient fade for smooth transition */}
+      <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-white to-transparent z-10" />
       {/* Background Patterns */}
-      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5" />
-      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-[#0F172A] via-transparent to-[#0F172A] z-10 pointer-events-none" />
-      <div className="absolute -top-40 -right-40 w-[600px] h-[600px] bg-primary/20 rounded-full blur-[100px] opacity-30" />
-      <div className="absolute -bottom-40 -left-40 w-[600px] h-[600px] bg-secondary/20 rounded-full blur-[100px] opacity-30" />
+      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.02]" />
+      <div className="absolute -top-40 -right-40 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[100px] opacity-50" />
+      <div className="absolute -bottom-40 -left-40 w-[600px] h-[600px] bg-secondary/10 rounded-full blur-[100px] opacity-50" />
 
       <div className="container mx-auto px-4 md:px-6 relative z-20">
         <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
@@ -55,14 +56,14 @@ export default function UMKM() {
             viewport={{ once: true }}
             className="max-w-2xl"
           >
-            <div className="inline-flex items-center gap-2 text-secondary font-bold uppercase tracking-wider text-sm mb-4 bg-secondary/10 px-4 py-1.5 rounded-full border border-secondary/20">
+            <div className="inline-flex items-center gap-2 text-primary font-bold uppercase tracking-wider text-sm mb-4 bg-primary/10 px-4 py-1.5 rounded-full border border-primary/20">
               <ShoppingBag size={16} />
               <span>Ekonomi Kreatif</span>
             </div>
-            <h2 className="text-4xl md:text-5xl font-serif font-bold text-white mb-6 leading-tight">
-              Produk Unggulan <span className="text-secondary">Nagari</span>
+            <h2 className="text-4xl md:text-5xl font-serif font-bold text-gray-900 mb-6 leading-tight">
+              Produk Unggulan <span className="text-primary">Nagari</span>
             </h2>
-            <p className="text-slate-300 leading-relaxed text-lg max-w-xl">
+            <p className="text-gray-600 leading-relaxed text-lg max-w-xl">
               Dukung perekonomian lokal dengan membeli produk-produk berkualitas karya anak nagari. Mulai dari kerajinan tangan hingga kuliner khas.
             </p>
           </motion.div>
@@ -73,7 +74,7 @@ export default function UMKM() {
             viewport={{ once: true }}
           >
             <Link href="/umkm">
-              <Button className="bg-white text-slate-900 hover:bg-secondary hover:text-white transition-all rounded-full h-12 px-8 font-bold text-lg shadow-lg hover:shadow-secondary/50 hidden md:flex gap-2 group">
+              <Button className="bg-primary text-white hover:bg-primary/90 transition-all rounded-full h-12 px-8 font-bold text-lg shadow-lg hover:shadow-primary/30 hidden md:flex gap-2 group">
                 Lihat Katalog UMKM <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
@@ -90,11 +91,11 @@ export default function UMKM() {
               transition={{ delay: index * 0.1 }}
             >
               <div 
-                className="group bg-slate-800/50 backdrop-blur-sm rounded-[2rem] overflow-hidden hover:ring-2 hover:ring-secondary/50 transition-all duration-500 border border-white/5 hover:-translate-y-2 shadow-xl cursor-pointer"
+                className="group bg-white rounded-[2rem] overflow-hidden hover:ring-2 hover:ring-primary/30 transition-all duration-500 border border-gray-100 hover:-translate-y-2 shadow-lg cursor-pointer"
                 onClick={(e) => handleOpenDetail(item, e)}
               >
                   <div className="aspect-[4/3] overflow-hidden relative">
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-60 z-10" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-60 z-10" />
                     {item.foto ? (
                       <img 
                         src={item.foto} 
@@ -109,14 +110,14 @@ export default function UMKM() {
                       />
                     )}
                     <div className="absolute top-4 right-4 z-20">
-                      <Badge className="bg-black/40 hover:bg-black/60 backdrop-blur-md text-white border border-white/10 px-3 py-1 text-sm">
+                      <Badge className="bg-white/90 hover:bg-white backdrop-blur-md text-gray-800 border border-gray-200 px-3 py-1 text-sm">
                         {item.jenis_usaha || 'UMKM'}
                       </Badge>
                     </div>
                   
                   {/* Quick Action Overlay */}
-                  <div className="absolute inset-0 bg-secondary/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 backdrop-blur-sm">
-                    <Button variant="outline" className="bg-transparent text-white border-2 border-white hover:bg-white hover:text-secondary font-bold rounded-full px-8 h-12 text-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+                  <div className="absolute inset-0 bg-primary/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 backdrop-blur-sm">
+                    <Button variant="outline" className="bg-transparent text-white border-2 border-white hover:bg-white hover:text-primary font-bold rounded-full px-8 h-12 text-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
                       Lihat Detail
                     </Button>
                   </div>
@@ -124,30 +125,30 @@ export default function UMKM() {
                 
                 <div className="p-8">
                   <div className="flex justify-between items-start mb-3">
-                    <h3 className="text-2xl font-bold font-serif text-white group-hover:text-secondary transition-colors leading-tight">
+                    <h3 className="text-2xl font-bold font-serif text-gray-900 group-hover:text-primary transition-colors leading-tight">
                       {item.nama_usaha}
                     </h3>
                   </div>
                   
                   <div className="flex items-center gap-1 mb-4">
                     {[...Array(5)].map((_, i) => (
-                        <Star key={i} size={14} className="fill-secondary text-secondary" />
+                        <Star key={i} size={14} className="fill-yellow-400 text-yellow-400" />
                     ))}
-                    <span className="text-xs text-slate-400 ml-2">(4.8)</span>
+                    <span className="text-xs text-gray-500 ml-2">(4.8)</span>
                   </div>
 
-                  <p className="text-slate-400 text-sm mb-6 line-clamp-2 leading-relaxed">
+                  <p className="text-gray-600 text-sm mb-6 line-clamp-2 leading-relaxed">
                     {item.produk}
                   </p>
                   
-                  <div className="flex justify-between items-center pt-6 border-t border-white/10">
+                  <div className="flex justify-between items-center pt-6 border-t border-gray-100">
                     <div>
-                        <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Pemilik</p>
-                        <span className="text-secondary font-bold text-lg">
+                        <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Pemilik</p>
+                        <span className="text-primary font-bold text-lg">
                           {item.pemilik?.nama || 'Hubungi Kami'}
                         </span>
                     </div>
-                    <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-secondary group-hover:text-white transition-colors cursor-pointer">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors cursor-pointer">
                         <ArrowRight size={20} className="-rotate-45 group-hover:rotate-0 transition-transform duration-300" />
                     </div>
                   </div>
@@ -159,7 +160,7 @@ export default function UMKM() {
         
         <div className="mt-12 text-center md:hidden">
           <Link href="/umkm">
-            <Button className="w-full bg-white text-slate-900 font-bold h-12 rounded-full">
+            <Button className="w-full bg-primary text-white font-bold h-12 rounded-full">
               Lihat Katalog UMKM
             </Button>
           </Link>

@@ -19,11 +19,12 @@ export default function Contact() {
   const { data: settingsData, isLoading } = useSiteSettings();
   const settings = settingsData?.data;
 
-  // Fallback values
+  // Use field names that match the API response
   const contactInfo = {
-    address: settings?.address || settings?.contact?.address || "Kantor Wali Nagari, Kecamatan Koto XI Tarusan",
-    phone: settings?.phone || settings?.contact?.phone || "+62 751 123456",
-    email: settings?.email || settings?.contact?.email || "nagari@sungaipinang.go.id"
+    address: settings?.contact_address || "Kantor Wali Nagari",
+    phone: settings?.contact_phone || "+62 751 123456",
+    email: settings?.contact_email || "nagari@example.go.id",
+    whatsapp: settings?.contact_whatsapp || settings?.whatsapp || null
   };
 
   return (
