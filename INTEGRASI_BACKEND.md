@@ -6,7 +6,7 @@
 **Tanggal Update**: 21 Desember 2025  
 **Frontend**: `/var/www/Nagari-Portal`  
 **Backend**: `/var/www/backend`  
-**Base URL**: `https://cilandak.sintanagari.cloud`  
+**Base URL**: `https://muaro.sintanagari.cloud`  
 **Website URL**: `https://nagarimuaro.id`
 
 ---
@@ -153,7 +153,7 @@ Nagari-Portal/client/src/lib/api/
 ### Endpoint Configuration (endpoints.ts)
 
 ```typescript
-const API_BASE_URL = "https://cilandak.sintanagari.cloud";
+const API_BASE_URL = "https://muaro.sintanagari.cloud";
 
 // CMS API - untuk konten website
 export const CMS_API = {

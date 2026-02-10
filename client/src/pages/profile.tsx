@@ -1,10 +1,10 @@
 
 import { motion } from "framer-motion";
-import { 
+import {
   History, Target, Users, Award, ChevronRight, Check, Loader2
 } from "lucide-react";
-import { 
-  Card, CardContent 
+import {
+  Card, CardContent
 } from "@/components/ui/card";
 import { useNagariProfile, useStaff } from "@/lib/api";
 import PageHeader from "@/components/layout/PageHeader";
@@ -15,7 +15,7 @@ import profileImage from "@assets/generated_images/portrait_of_nagari_head.png";
 export default function Profil() {
   const { data: profileData, isLoading: profileLoading } = useNagariProfile();
   const { data: staffData, isLoading: staffLoading } = useStaff();
-  
+
   const profile = profileData?.data;
   const staff = staffData?.data || [];
 
@@ -35,12 +35,12 @@ export default function Profil() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <PageHeader 
-        title="Profil Nagari" 
+      <PageHeader
+        title="Profil Nagari"
         description="Mengenal lebih dekat sejarah, visi misi, dan struktur pemerintahan Nagari."
         image={profileImage}
       />
-      
+
       <div className="container mx-auto px-4 py-12 space-y-24">
         {/* Sejarah - Animated Scroll Reveal */}
         <section className="grid md:grid-cols-2 gap-12 items-center">
@@ -56,7 +56,7 @@ export default function Profil() {
               <span>Sejarah Nagari</span>
             </div>
             <h2 className="text-4xl md:text-5xl font-serif font-bold text-gray-900 leading-tight">
-              Akar Sejarah & <br/><span className="text-primary">Kearifan Lokal</span>
+              Akar Sejarah & <br /><span className="text-primary">Kearifan Lokal</span>
             </h2>
             <div className="space-y-4 text-gray-600 text-lg leading-relaxed">
               <p>
@@ -81,19 +81,19 @@ export default function Profil() {
             className="relative"
           >
             <div className="aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl border-8 border-white">
-              <img 
-                src="https://images.unsplash.com/photo-1598327774900-53093952f901?q=80&w=800&auto=format&fit=crop" 
-                alt="Sejarah Nagari" 
+              <img
+                src="https://sumbar.jadesta.com/imgpost/106151.jpg"
+                alt="Sejarah Nagari"
                 className="w-full h-full object-cover scale-110 hover:scale-100 transition-transform duration-[2s]"
               />
             </div>
-            <motion.div 
+            <motion.div
               whileHover={{ scale: 1.05 }}
               className="absolute -bottom-8 -left-8 w-56 h-56 bg-white p-6 rounded-3xl shadow-xl flex flex-col items-center justify-center text-center border border-gray-100 hidden md:flex"
             >
               <div className="w-16 h-1 bg-secondary mb-4 rounded-full" />
               <span className="text-6xl font-bold text-gray-900 font-serif tracking-tighter">24</span>
-              <span className="text-gray-500 font-medium mt-2 uppercase tracking-widest text-sm">Tahun<br/>Berdiri</span>
+              <span className="text-gray-500 font-medium mt-2 uppercase tracking-widest text-sm">Tahun<br />Berdiri</span>
             </motion.div>
           </motion.div>
         </section>
@@ -102,7 +102,7 @@ export default function Profil() {
         <section className="relative rounded-[3rem] overflow-hidden bg-primary text-white p-8 md:p-20">
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
           <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-          
+
           <div className="relative z-10 text-center max-w-4xl mx-auto mb-16">
             <div className="inline-flex items-center gap-2 text-green-200 font-bold uppercase tracking-wider text-sm mb-6 border border-green-400/30 px-4 py-1.5 rounded-full">
               <Target size={16} />
@@ -176,9 +176,9 @@ export default function Profil() {
                   <div className="aspect-[3/4] rounded-3xl overflow-hidden mb-6 relative shadow-lg">
                     <div className="absolute inset-0 bg-primary/20 mix-blend-multiply opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10" />
                     {person.photo ? (
-                      <img 
-                        src={person.photo} 
-                        alt={person.name} 
+                      <img
+                        src={person.photo}
+                        alt={person.name}
                         className="w-full h-full object-cover transition-all duration-700 scale-100 group-hover:scale-110"
                       />
                     ) : (
@@ -187,7 +187,7 @@ export default function Profil() {
                       </div>
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
-                    
+
                     <div className="absolute bottom-0 left-0 w-full p-6 text-white z-20 translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
                       <p className="text-xs font-bold uppercase tracking-widest text-secondary mb-1 opacity-0 group-hover:opacity-100 transition-opacity delay-100">
                         {person.department || 'Perangkat Nagari'}

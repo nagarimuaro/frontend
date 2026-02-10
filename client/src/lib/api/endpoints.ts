@@ -1,5 +1,5 @@
 // API Configuration
-export const API_BASE_URL = "https://cilandak.sintanagari.cloud";
+export const API_BASE_URL = "https://muaro.sintanagari.cloud";
 
 // CMS Public API Endpoints
 export const CMS_API = {
@@ -8,7 +8,7 @@ export const CMS_API = {
   NEWS: `${API_BASE_URL}/api/cms/public/news`,
   NEWS_DETAIL: (slug: string) => `${API_BASE_URL}/api/cms/public/news/${slug}`,
   SERVICES: `${API_BASE_URL}/api/cms/public/services`,
-  STAFF: `${API_BASE_URL}/api/cms/public/staff`, 
+  STAFF: `${API_BASE_URL}/api/cms/public/staff`,
   KATA_SAMBUTAN: `${API_BASE_URL}/api/cms/public/kata-sambutan`,
   DOCUMENTS: `${API_BASE_URL}/api/cms/public/documents`,
   DOCUMENT_DOWNLOAD: (slug: string) => `${API_BASE_URL}/api/cms/public/documents/${slug}/download`,

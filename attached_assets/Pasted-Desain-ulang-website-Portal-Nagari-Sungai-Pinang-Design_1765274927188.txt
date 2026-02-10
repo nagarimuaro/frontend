@@ -74,49 +74,49 @@ ACCESSIBILITY:
 
 
 
-- Site settings: https://cilandak.sintanagari.cloud/api/cms/public/site-settings
+- Site settings: https://muaro.sintanagari.cloud/api/cms/public/site-settings
 	- Response = {"site_name":"Portal Nagari Sungai Pinang","site_tagline":"Membangun Nagari Yang Maju dan Sejahtera","contact_address":"Jl. Raya Sungai Pinang, Kabupaten Pasaman Barat, Sumatera Barat","contact_email":"info@sungaipinang.id","contact_phone":"+62 756 123456","contact_whatsapp":"+62 812 3456 7890","social_facebook":"https://facebook.com/nagarisungaipinang","social_instagram":"https://instagram.com/nagarisungaipinang","social_youtube":"https://youtube.com/@nagarisungaipinang","seo_meta_title":"Portal Nagari Sungai Pinang - Kabupaten Pasaman Barat","seo_meta_description":"Portal resmi Nagari Sungai Pinang menyediakan informasi terkini tentang pelayanan publik, berita, dan program pembangunan nagari."}
 
-- Hero banners: https://cilandak.sintanagari.cloud/api/cms/public/hero-banners
+- Hero banners: https://muaro.sintanagari.cloud/api/cms/public/hero-banners
 	 - Response = [
  {"title":"Selamat Datang di Portal Nagari Sungai Pinang","subtitle":"Membangun Nagari Yang Maju dan Sejahtera","button_text":"Pelajari Lebih Lanjut","button_url":"/profil","image_url":"https://sintanagari.cloud/storage/17/placeholder.jpg","overlay_color":"rgba(0,0,0,0.4)"},
  {"title":"Pelayanan Publik Terdepan","subtitle":"Melayani Dengan Sepenuh Hati","button_text":"Lihat Layanan","button_url":"/services","image_url":"https://sintanagari.cloud/storage/18/placeholder.jpg","overlay_color":"rgba(0,0,0,0.5)"}
 ]
 
-- News list: https://cilandak.sintanagari.cloud/api/cms/public/news (use first 6; featured ribbon; urgent badge)
+- News list: https://muaro.sintanagari.cloud/api/cms/public/news (use first 6; featured ribbon; urgent badge)
 	- Response : [
  {"title":"Musyawarah Nagari Pembahasan RPJM Nagari 2024-2030","slug":"musyawarah-nagari-pembahasan-rpjm-nagari-2024-2030","excerpt":"Wali Nagari Sungai Pinang menggelar Musyawarah Nagari ...","category":{"name":"Pembangunan","color":"#3B82F6"},"published_at":"2025-11-29T03:25:58.000000Z","is_featured":true,"is_urgent":false},
  {"title":"Pembangunan Jalan Nagari Tahap II Dimulai","slug":"pembangunan-jalan-nagari-tahap-ii-dimulai","excerpt":"Proyek pembangunan jalan nagari tahap II telah dimulai ...","category":{"name":"Pembangunan","color":"#3B82F6"},"published_at":"2025-11-26T03:25:58.000000Z","is_featured":false,"is_urgent":false}
 ]
 
-- Services: https://cilandak.sintanagari.cloud/api/cms/public/services
+- Services: https://muaro.sintanagari.cloud/api/cms/public/services
 	- Response : [
  {"name":"Surat Keterangan Domisili","slug":"surat-keterangan-domisili","description":"Pelayanan pembuatan surat keterangan domisili untuk berbagai keperluan.","estimated_time":"1-2 hari kerja","fee":"Gratis","contact_info":"Kantor Wali Nagari - 0756-123456","featured_image":"https://sintanagari.cloud/storage/1/placeholder.jpg"},
  {"name":"Surat Keterangan Tidak Mampu","slug":"surat-keterangan-tidak-mampu","description":"Pelayanan pembuatan surat keterangan tidak mampu untuk keperluan beasiswa dan bantuan sosial.","estimated_time":"3-5 hari kerja","fee":"Gratis","contact_info":"Kantor Wali Nagari - 0756-123456","featured_image":"https://sintanagari.cloud/storage/2/placeholder.jpg"}
 ]
 
-- Staff: https://cilandak.sintanagari.cloud/api/cms/public/staff
+- Staff: https://muaro.sintanagari.cloud/api/cms/public/staff
 	- Response : [
  {"name":"H. Ahmad Syukri, S.Sos","position":"Wali Nagari","department":"Pemerintahan","is_leadership":true,"status":"active","photo":"http://sintanagari.cloud/storage/12/placeholder.jpg"},
  {"name":"Drs. Bambang Sutrisno","position":"Sekretaris Nagari","department":"Sekretariat","is_leadership":true,"status":"active","photo":"https://sintanagari.cloud/storage/13/placeholder.jpg"}
 ]
 
 
-- Documents: https://cilandak.sintanagari.cloud/api/cms/public/documents
+- Documents: https://muaro.sintanagari.cloud/api/cms/public/documents
 	- Response : [
  {"title":"Peraturan Nagari No. 1 Tahun 2024","slug":"peraturan-nagari-no-1-tahun-2024","document_type":"regulation","year":2024,"file_url":"https://sintanagari.cloud/storage/20/placeholder.pdf","category":{"name":"Transparansi"}},
  {"title":"Profil Nagari Sungai Pinang 2024","slug":"profil-nagari-sungai-pinang-2024","document_type":"ppid","year":2024,"file_url":"https://sintanagari.cloud/storage/22/placeholder.pdf","category":{"name":"Transparansi"}}
 ]
 
 
-- Categories: https://cilandak.sintanagari.cloud/api/cms/public/categories
+- Categories: https://muaro.sintanagari.cloud/api/cms/public/categories
 	- Response : [
  {"name":"Berita Utama","slug":"berita-utama","color":"#EF4444","icon":"heroicon-o-newspaper","type":"news"},
  {"name":"Pengumuman","slug":"pengumuman","color":"#F59E0B","icon":"heroicon-o-megaphone","type":"news"}
 ]
 
 
-- News detail: https://cilandak.sintanagari.cloud/api/cms/public/news/{slug}
+- News detail: https://muaro.sintanagari.cloud/api/cms/public/news/{slug}
 	- Response : {"success":true,"data":{"id":1,"title":"Musyawarah Nagari Pembahasan RPJM Nagari 2024-2030","slug":"musyawarah-nagari-pembahasan-rpjm-nagari-2024-2030","excerpt":"Wali Nagari Sungai Pinang menggelar Musyawarah Nagari untuk membahas Rencana Pembangunan Jangka Menengah Nagari periode 2024-2030.","content":"<p>Pada hari Sabtu, 15 September 2024, Wali Nagari Sungai Pinang menggelar Musyawarah Nagari yang dihadiri oleh seluruh perangkat nagari, ninik mamak, dan perwakilan masyarakat...<\/p>","featured_image":null,"gallery_images":null,"category_id":4,"author_id":1,"meta_title":null,"meta_description":null,"meta_keywords":null,"status":"published","is_featured":true,"is_urgent":false,"allow_comments":true,"published_at":"2025-11-29T03:25:58.000000Z","views_count":3,"created_at":"2025-12-01T03:25:58.000000Z","updated_at":"2025-12-09T09:32:05.000000Z","tenant_id":1,"category":{"id":4,"name":"Pembangunan","slug":"pembangunan","description":null,"color":"#3B82F6","icon":"heroicon-o-building-office","type":"news","sort_order":0,"is_active":true,"created_at":"2025-12-01T03:25:58.000000Z","updated_at":"2025-12-01T03:25:58.000000Z","tenant_id":1},"media":[]},"message":"News detail retrieved successfully"}
 
 

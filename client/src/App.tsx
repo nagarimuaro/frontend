@@ -19,6 +19,8 @@ import Complaints from "@/pages/complaints";
 import GIS from "@/pages/gis";
 import Projects from "@/pages/projects";
 import PublicData from "@/pages/public-data";
+import Monografi from "@/pages/monografi";
+import Infografis from "@/pages/infografis";
 import Contact from "@/pages/contact";
 import NotFound from "@/pages/not-found";
 import AIServicePopup from "@/components/shared/AIServicePopup";
@@ -51,6 +53,9 @@ function Router() {
         <Route path="/profil">
           <PageWrapper><Profil /></PageWrapper>
         </Route>
+        <Route path="/monografi">
+          <PageWrapper><Monografi /></PageWrapper>
+        </Route>
         <Route path="/layanan">
           <PageWrapper><Services /></PageWrapper>
         </Route>
@@ -80,6 +85,9 @@ function Router() {
         </Route>
         <Route path="/data-publik">
           <PageWrapper><PublicData /></PageWrapper>
+        </Route>
+        <Route path="/infografis">
+          <PageWrapper><Infografis /></PageWrapper>
         </Route>
         <Route path="/kontak">
           <PageWrapper><Contact /></PageWrapper>
