@@ -36,43 +36,32 @@ export default function News() {
   return (
     <section className="section-spacing bg-background relative">
       <div className="container mx-auto container-padding">
-        <div className="flex justify-between items-end mb-12 md:mb-16">
+        <div className="max-w-3xl mb-12 md:mb-14">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
           >
-            <span className="text-primary font-bold text-xs uppercase tracking-wider mb-3 block opacity-75">Kabar Nagari</span>
-            <h2 className="text-4xl md:text-5xl font-serif font-bold text-foreground leading-tight">
-              Berita & Informasi <span className="text-secondary italic">Terkini</span>
+            <p className="text-primary font-bold text-sm uppercase tracking-wider mb-3">Kabar Nagari</p>
+            <h2 className="text-3xl md:text-4xl font-serif font-bold text-foreground leading-tight">
+              Berita & Informasi Terkini
             </h2>
-          </motion.div>
-          
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-          >
-            <Link href="/berita">
-              <Button variant="ghost" className="hidden md:flex gap-2 text-primary hover:text-primary hover:bg-primary/8 rounded-full px-6 h-11 font-semibold group">
-                Arsip Berita <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
           </motion.div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Featured News */}
           <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="group cursor-pointer relative flex flex-col"
+            className="lg:col-span-2 group cursor-pointer relative"
           >
             <Link href={`/berita/${featured.slug}`} className="flex flex-col h-full">
-              <div className="relative overflow-hidden rounded-xl aspect-[16/10] mb-6 shadow-lg flex-shrink-0">
-                <div className="absolute inset-0 bg-black/25 group-hover:bg-black/15 transition-colors z-10 duration-300" />
+              <div className="relative overflow-hidden rounded-lg aspect-[16/9] mb-4 shadow-sm flex-shrink-0">
+                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors z-10 duration-200" />
                 <img 
                   src={featured.featured_image_url || featured.featured_image || "https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=800&auto=format&fit=crop"} 
                   alt={featured.title}
@@ -87,66 +76,51 @@ export default function News() {
                 </div>
               </div>
               
-              <div className="space-y-4 flex flex-col flex-1">
-                <div className="flex items-center gap-4 text-xs text-muted-foreground font-medium border-b border-border pb-4">
-                  <span className="flex items-center gap-1.5"><Calendar size={14} className="text-primary" /> {formatDate(featured.published_at)}</span>
-                  <span className="flex items-center gap-1.5"><User size={14} className="text-primary" /> Admin Nagari</span>
+              <div className="space-y-3 flex flex-col flex-1">
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <Calendar size={12} className="text-primary" />
+                  <span>{formatDate(featured.published_at)}</span>
                 </div>
                 
-                <h3 className="text-2xl md:text-3xl font-serif font-bold text-foreground group-hover:text-primary transition-colors leading-snug">
+                <h3 className="text-xl md:text-2xl font-serif font-bold text-foreground group-hover:text-primary transition-colors leading-snug line-clamp-2">
                   {featured.title}
                 </h3>
                 
-                <p className="text-muted-foreground line-clamp-3 text-base leading-relaxed flex-1">
+                <p className="text-muted-foreground line-clamp-2 text-sm leading-relaxed">
                   {featured.excerpt}
                 </p>
-                
-                <Button variant="link" className="p-0 h-auto text-primary font-semibold group-hover:underline decoration-2 underline-offset-4 flex items-center gap-2 mt-2 w-fit">
-                  Baca Selengkapnya <ChevronRight size={16} />
-                </Button>
               </div>
             </Link>
           </motion.div>
 
           {/* Other News List */}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4">
             {others.map((item, index) => (
               <motion.div 
                 key={item.id}
-                initial={{ opacity: 0, x: 20 }}
-                whileInView={{ opacity: 1, x: 0 }}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: index * 0.12 }}
-                className="flex gap-5 group cursor-pointer items-start p-4 rounded-lg hover:bg-accent transition-all hover:shadow-sm"
+                transition={{ delay: index * 0.1, duration: 0.4 }}
               >
-                <Link href={`/berita/${item.slug}`} className="flex gap-5 items-start w-full">
-                  <div className="w-32 aspect-[4/3] rounded-lg overflow-hidden shrink-0 shadow-md relative flex-shrink-0">
+                <Link href={`/berita/${item.slug}`} className="group cursor-pointer p-3 rounded-lg border border-border hover:border-primary hover:bg-primary/5 transition-all flex flex-col h-full">
+                  <div className="w-full aspect-[16/9] rounded-md overflow-hidden mb-3 shadow-sm">
                     <img 
                       src={item.featured_image_url || item.featured_image || "https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=800&auto=format&fit=crop"}
                       alt={item.title}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
-                    <div className="absolute top-2 left-2 z-10">
-                       <Badge 
-                         className="bg-white/90 text-xs text-foreground border-none shadow-sm backdrop-blur-sm px-2 py-0.5 hover:bg-white transition-colors"
-                       >
-                          {item.category?.name || "Berita"}
-                       </Badge>
-                    </div>
                   </div>
                   
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
-                      <Calendar size={12} /> {formatDate(item.published_at)}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Calendar size={12} className="text-primary" />
+                      <span>{formatDate(item.published_at)}</span>
                     </div>
                     
-                    <h4 className="text-lg font-serif font-bold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-snug">
+                    <h4 className="text-sm font-serif font-bold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-snug">
                       {item.title}
                     </h4>
-                    
-                    <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                      {item.excerpt}
-                    </p>
                   </div>
                 </Link>
               </motion.div>
