@@ -29,33 +29,31 @@ export default function Statistics() {
   }
 
   return (
-    <section className="section-spacing -mt-24 relative z-20 container-padding pointer-events-none">
+    <section className="section-spacing -mt-20 relative z-20 container-padding pointer-events-none">
       <div className="container mx-auto pointer-events-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
           {statistics.map((stat, index) => (
             <motion.div
               key={stat.label}
-              initial={{ opacity: 0, y: 50 }}
+              initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: index * 0.12, type: "spring", stiffness: 100 }}
-              whileHover={{ y: -8, transition: { duration: 0.3 } }}
+              transition={{ delay: index * 0.08, duration: 0.4 }}
             >
-              <Card className="card-hover-lift border-none shadow-lg bg-white/95 backdrop-blur-sm h-full overflow-hidden group hover:shadow-2xl">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-secondary to-primary transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
-                <CardContent className="p-8 flex flex-col items-center text-center relative space-y-4">
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/15 to-secondary/10 flex items-center justify-center text-primary mb-2 group-hover:scale-125 group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-md">
-                    <stat.icon size={28} strokeWidth={1.5} />
+              <Card className="professional-hover border border-border shadow-sm bg-white h-full overflow-hidden group rounded-lg">
+                <CardContent className="p-6 flex flex-col items-center text-center relative space-y-3">
+                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all duration-200">
+                    <stat.icon size={24} strokeWidth={1.5} />
                   </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <h3 className="text-3xl md:text-4xl font-bold text-foreground font-serif tracking-tight leading-none">
+                  <div className="flex flex-col items-center gap-0.5">
+                    <h3 className="text-2xl md:text-3xl font-bold text-foreground font-serif tracking-tight leading-none">
                       {stat.value}
                     </h3>
-                    <p className="text-xs text-muted-foreground font-semibold uppercase tracking-widest">
+                    <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">
                       {stat.suffix}
                     </p>
                   </div>
-                  <p className="text-sm text-muted-foreground font-medium group-hover:text-primary transition-colors pt-2">
+                  <p className="text-sm text-muted-foreground font-medium">
                     {stat.label}
                   </p>
                 </CardContent>

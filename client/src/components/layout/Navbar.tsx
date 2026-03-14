@@ -62,41 +62,37 @@ export default function Navbar() {
     return () => { document.body.style.overflow = "unset"; };
   }, [isOpen]);
 
-  const transparentStyle = "bg-transparent text-white hover:bg-white/10 hover:text-white focus:bg-white/10 focus:text-white data-[active]:bg-white/20 data-[state=open]:bg-white/10";
-  const scrolledStyle = "bg-transparent text-foreground hover:bg-primary/5 hover:text-primary focus:bg-primary/5 focus:text-primary data-[active]:bg-primary/5 data-[active]:text-primary data-[state=open]:bg-primary/5 data-[state=open]:text-primary";
+  const navLinkStyle = "text-white hover:text-secondary focus:text-secondary data-[active]:text-secondary data-[state=open]:text-secondary";
+  const navLinkScrolledStyle = "text-foreground hover:text-primary focus:text-primary data-[active]:text-primary data-[state=open]:text-primary";
 
   return (
     <>
       <motion.nav
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.3 }}
         className={cn(
-          "fixed top-0 w-full z-[100] transition-all duration-500",
+          "fixed top-0 w-full z-[100] transition-all duration-300",
           scrolled
-            ? "bg-white/80 backdrop-blur-xl shadow-sm border-b border-gray-200/50 py-3"
-            : "bg-gradient-to-b from-black/60 to-transparent py-5"
+            ? "bg-white shadow-sm border-b border-border py-3"
+            : "bg-primary py-4"
         )}
       >
         <div className="container mx-auto px-4 md:px-6 flex items-center justify-between">
           <Link href="/">
             <a className="flex items-center gap-3 group relative z-50">
-              <motion.div
-                whileHover={{ rotate: 360 }}
-                transition={{ duration: 0.7 }}
-                className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg border border-white/20 overflow-hidden"
-              >
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center shadow-sm overflow-hidden flex-shrink-0">
                 {siteLogo ? (
-                  <img src={siteLogo} alt={siteName} className="w-full h-full object-contain" />
+                  <img src={siteLogo} alt={siteName} className="w-full h-full object-contain bg-white" />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-primary to-green-700 flex items-center justify-center text-white font-serif font-bold text-xl">
+                  <div className={cn("w-full h-full flex items-center justify-center text-white font-serif font-bold text-sm", scrolled ? "bg-primary" : "bg-white/20")}>
                     {siteInitials}
                   </div>
                 )}
-              </motion.div>
+              </div>
               <div className={cn("flex flex-col transition-colors duration-300", (scrolled && !isOpen) ? "text-foreground" : "text-white")}>
-                <span className="font-serif font-bold text-lg leading-tight tracking-wide">{siteName}</span>
-                <span className={cn("text-[10px] uppercase tracking-[0.2em] font-medium opacity-80", (scrolled && !isOpen) ? "text-primary" : "text-white/80")}>Portal Nagari</span>
+                <span className="font-serif font-bold text-base leading-snug tracking-wide">{siteName}</span>
+                <span className={cn("text-xs uppercase tracking-wider font-medium opacity-75", (scrolled && !isOpen) ? "text-muted-foreground" : "text-white/70")}>Portal Nagari</span>
               </div>
             </a>
           </Link>
@@ -107,14 +103,14 @@ export default function Navbar() {
               <NavigationMenuList>
                 <NavigationMenuItem>
                   <Link href="/">
-                    <NavigationMenuLink className={cn(navigationMenuTriggerStyle(), scrolled ? scrolledStyle : transparentStyle)}>
+                    <NavigationMenuLink className={cn(navigationMenuTriggerStyle(), "text-sm font-medium", scrolled ? navLinkScrolledStyle : navLinkStyle)}>
                       Beranda
                     </NavigationMenuLink>
                   </Link>
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger className={cn(scrolled ? scrolledStyle : transparentStyle)}>Profil</NavigationMenuTrigger>
+                  <NavigationMenuTrigger className={cn("text-sm font-medium", scrolled ? navLinkScrolledStyle : navLinkStyle)}>Profil</NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] bg-white/95 backdrop-blur-xl rounded-2xl border border-gray-100 shadow-xl">
                       <ListItem href="/profil" title="Profil Nagari" icon="🏛️">
@@ -128,7 +124,7 @@ export default function Navbar() {
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger className={cn(scrolled ? scrolledStyle : transparentStyle)}>Pemerintahan</NavigationMenuTrigger>
+                  <NavigationMenuTrigger className={cn("text-sm font-medium", scrolled ? navLinkScrolledStyle : navLinkStyle)}>Pemerintahan</NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] bg-white/95 backdrop-blur-xl rounded-2xl border border-gray-100 shadow-xl">
                       <ListItem href="/ppid" title="PPID & Dokumen" icon="📂">
@@ -148,7 +144,7 @@ export default function Navbar() {
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger className={cn(scrolled ? scrolledStyle : transparentStyle)}>Layanan</NavigationMenuTrigger>
+                  <NavigationMenuTrigger className={cn("text-sm font-medium", scrolled ? navLinkScrolledStyle : navLinkStyle)}>Layanan</NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] bg-white/95 backdrop-blur-xl rounded-2xl border border-gray-100 shadow-xl">
                       <ListItem href="/layanan" title="Layanan Surat" icon="📝">
@@ -162,7 +158,7 @@ export default function Navbar() {
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger className={cn(scrolled ? scrolledStyle : transparentStyle)}>Potensi</NavigationMenuTrigger>
+                  <NavigationMenuTrigger className={cn("text-sm font-medium", scrolled ? navLinkScrolledStyle : navLinkStyle)}>Potensi</NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] bg-white/95 backdrop-blur-xl rounded-2xl border border-gray-100 shadow-xl">
                       <ListItem href="/umkm" title="UMKM" icon="🛍️">
@@ -180,7 +176,7 @@ export default function Navbar() {
 
                 <NavigationMenuItem>
                   <Link href="/berita">
-                    <NavigationMenuLink className={cn(navigationMenuTriggerStyle(), scrolled ? scrolledStyle : transparentStyle)}>
+                    <NavigationMenuLink className={cn(navigationMenuTriggerStyle(), "text-sm font-medium", scrolled ? navLinkScrolledStyle : navLinkStyle)}>
                       Berita
                     </NavigationMenuLink>
                   </Link>
@@ -188,7 +184,7 @@ export default function Navbar() {
 
                 <NavigationMenuItem>
                   <Link href="/kontak">
-                    <NavigationMenuLink className={cn(navigationMenuTriggerStyle(), scrolled ? scrolledStyle : transparentStyle)}>
+                    <NavigationMenuLink className={cn(navigationMenuTriggerStyle(), "text-sm font-medium", scrolled ? navLinkScrolledStyle : navLinkStyle)}>
                       Kontak
                     </NavigationMenuLink>
                   </Link>
@@ -199,18 +195,16 @@ export default function Navbar() {
 
           <div className="hidden lg:block">
             <Link href="/layanan">
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button
-                  className={cn(
-                    "rounded-full font-semibold shadow-md hover:shadow-lg transition-all border h-10 px-6 text-sm",
-                    scrolled
-                      ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90"
-                      : "bg-white/15 backdrop-blur-sm text-white border-white/30 hover:bg-white hover:text-primary"
-                  )}
-                >
-                  Layanan Online
-                </Button>
-              </motion.div>
+              <Button
+                className={cn(
+                  "rounded-lg font-semibold transition-all border h-10 px-6 text-sm",
+                  scrolled
+                    ? "bg-secondary text-secondary-foreground border-secondary hover:bg-secondary/90"
+                    : "bg-secondary text-secondary-foreground border-secondary hover:bg-secondary/90"
+                )}
+              >
+                Layanan Online
+              </Button>
             </Link>
           </div>
 
@@ -219,20 +213,20 @@ export default function Navbar() {
         </div>
       </motion.nav>
 
-      {/* Mobile Toggle Button - OUTSIDE of motion.nav to avoid stacking context issues */}
+      {/* Mobile Toggle Button - OUTSIDE of motion.nav */}
       <button
         className={cn(
-          "lg:hidden fixed top-4 right-4 p-2 rounded-full transition-colors z-[9999]",
+          "lg:hidden fixed top-4 right-4 p-2 rounded-lg transition-colors z-[9999]",
           isOpen
-            ? "text-white hover:bg-white/10"
+            ? "text-white hover:bg-white/20"
             : scrolled
-              ? "text-gray-900 hover:bg-gray-100"
-              : "text-white hover:bg-white/10"
+              ? "text-foreground hover:bg-accent"
+              : "text-white hover:bg-white/20"
         )}
         onClick={() => setIsOpen(!isOpen)}
         style={{ pointerEvents: 'auto' }}
       >
-        {isOpen ? <X size={24} /> : <Menu size={24} />}
+        {isOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
       {/* Mobile Fullscreen Menu - OUTSIDE of motion.nav */}
@@ -246,8 +240,7 @@ export default function Navbar() {
             transition={{ duration: 0.5, ease: "easeInOut" }}
             className="fixed top-0 left-0 right-0 bottom-0 bg-primary z-[9998] flex flex-col pt-24 px-6 overflow-y-auto"
           >
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 pointer-events-none" />
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+            <div className="absolute inset-0 pointer-events-none" />
 
             <div className="flex flex-col gap-6 relative z-10 pb-10">
               <MobileLink href="/" onClick={() => setIsOpen(false)}>Beranda</MobileLink>

@@ -38,83 +38,83 @@
   --color-chart-5: hsl(var(--chart-5));
 }
 
-/* LIGHT MODE - Nature & Golden Hour Theme */
+/* LIGHT MODE - Corporate & Professional Theme */
 :root {
-  /* Deep Nature Green (Padi di Sawah) */
-  --primary: 142 65% 28%; 
-  --primary-foreground: 0 0% 100%;
+  /* Deep Navy Blue - Professional Primary */
+  --primary: 217 33% 17%; /* #1e3a5f */
+  --primary-foreground: 0 0% 100%; /* White text on primary */
 
-  /* Golden Hour / Sunset (Kemakmuran) */
-  --secondary: 35 90% 50%;
+  /* Professional Teal - Accent */
+  --secondary: 178 68% 38%; /* #2b9a9e */
   --secondary-foreground: 0 0% 100%;
 
-  /* Warm Organic Backgrounds */
-  --background: 40 20% 98%; /* Creamy White */
-  --foreground: 140 30% 15%; /* Dark Moss Green Text */
+  /* Clean Professional Backgrounds */
+  --background: 0 0% 98%; /* Nearly white */
+  --foreground: 217 20% 20%; /* Dark navy text */
 
-  --card: 0 0% 100%;
-  --card-foreground: 140 30% 15%;
+  --card: 0 0% 100%; /* Pure white cards */
+  --card-foreground: 217 20% 20%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 140 30% 15%;
+  --popover-foreground: 217 20% 20%;
 
-  --muted: 140 20% 94%;
-  --muted-foreground: 140 10% 45%;
+  --muted: 220 14% 96%; /* Light gray */
+  --muted-foreground: 217 12% 43%; /* Medium gray text */
 
-  --accent: 142 30% 94%; /* Light Green Tint */
-  --accent-foreground: 142 65% 28%;
+  --accent: 178 68% 38%; /* Teal accent */
+  --accent-foreground: 0 0% 100%;
 
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 98%;
 
-  --border: 140 15% 88%;
-  --input: 140 15% 88%;
-  --ring: 142 65% 28%;
+  --border: 220 13% 91%; /* Subtle borders */
+  --input: 220 13% 91%;
+  --ring: 178 68% 38%;
 
-  --radius: 0.75rem;
+  --radius: 0.5rem; /* Professional 8px radius */
 
-  /* Chart colors inspired by nature */
-  --chart-1: 142 65% 28%; /* Green */
-  --chart-2: 35 90% 50%;  /* Gold */
-  --chart-3: 200 80% 45%; /* Water Blue */
-  --chart-4: 25 85% 55%;  /* Earth Orange */
-  --chart-5: 280 40% 60%; /* Flower Purple */
+  /* Chart colors - professional palette */
+  --chart-1: 217 33% 17%; /* Navy */
+  --chart-2: 178 68% 38%; /* Teal */
+  --chart-3: 210 65% 45%; /* Blue */
+  --chart-4: 15 86% 48%;  /* Orange */
+  --chart-5: 0 75% 50%;   /* Red */
 }
 
 .dark {
-  --background: 140 30% 8%;
-  --foreground: 40 20% 98%;
+  --background: 217 30% 9%; /* Dark navy background */
+  --foreground: 0 0% 95%; /* Light text */
 
-  --card: 140 30% 10%;
-  --card-foreground: 40 20% 98%;
+  --card: 217 25% 12%;
+  --card-foreground: 0 0% 95%;
 
-  --popover: 140 30% 10%;
-  --popover-foreground: 40 20% 98%;
+  --popover: 217 25% 12%;
+  --popover-foreground: 0 0% 95%;
 
-  --primary: 142 55% 45%;
+  --primary: 217 33% 35%; /* Lighter navy for dark mode */
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 35 90% 50%;
+  --secondary: 178 60% 50%;
   --secondary-foreground: 0 0% 100%;
 
-  --muted: 140 20% 15%;
-  --muted-foreground: 140 10% 70%;
+  --muted: 217 20% 20%;
+  --muted-foreground: 217 10% 70%;
 
-  --accent: 140 20% 15%;
-  --accent-foreground: 40 20% 98%;
+  --accent: 178 60% 50%;
+  --accent-foreground: 0 0% 100%;
 
   --destructive: 0 62% 30%;
   --destructive-foreground: 0 0% 98%;
 
-  --border: 140 20% 20%;
-  --input: 140 20% 20%;
-  --ring: 142 55% 45%;
+  --border: 217 20% 25%;
+  --input: 217 20% 25%;
+  --ring: 178 68% 38%;
 
-  --chart-1: 142 55% 45%;
-  --chart-2: 35 90% 50%;
-  --chart-3: 200 80% 45%;
-  --chart-4: 25 85% 55%;
-  --chart-5: 280 40% 60%;
+  --chart-1: 217 33% 35%;
+  --chart-2: 178 60% 50%;
+  --chart-3: 210 65% 45%;
+  --chart-4: 15 86% 48%;
+  --chart-5: 0 75% 50%;
 }
 
 @layer base {
@@ -186,11 +186,11 @@
     @apply bg-primary/20 rounded-full hover:bg-primary/40 transition-colors;
   }
 
-  /* Smooth fade-in animation for content */
+  /* Professional subtle animations */
   @keyframes fadeInUp {
     from {
       opacity: 0;
-      transform: translateY(20px);
+      transform: translateY(12px);
     }
     to {
       opacity: 1;
@@ -199,14 +199,14 @@
   }
 
   .fade-in-up {
-    animation: fadeInUp 0.6s ease-out;
+    animation: fadeInUp 0.5s ease-out;
   }
 
-  /* Staggered animation helper */
+  /* Subtle scale animation */
   @keyframes fadeInScale {
     from {
       opacity: 0;
-      transform: scale(0.95);
+      transform: scale(0.98);
     }
     to {
       opacity: 1;
@@ -216,5 +216,10 @@
 
   .fade-in-scale {
     animation: fadeInScale 0.4s ease-out;
+  }
+
+  /* Professional card hover - minimal lift */
+  .professional-hover {
+    @apply transition-all duration-200 hover:shadow-md;
   }
 }

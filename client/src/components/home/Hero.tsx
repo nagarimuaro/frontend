@@ -78,34 +78,28 @@ export default function Hero() {
             transition={{ duration: 1, ease: "easeOut" }}
           >
             <motion.div 
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="inline-flex items-center gap-2 py-2 px-5 rounded-full bg-white/10 text-white text-xs md:text-sm font-bold uppercase tracking-[0.2em] mb-8 backdrop-blur-md border border-white/20 shadow-2xl"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="inline-flex items-center gap-2 py-2 px-4 rounded-lg bg-white/15 text-white text-xs font-bold uppercase tracking-wider mb-6 backdrop-blur-sm border border-white/25"
             >
-              <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
               Portal Resmi Nagari
             </motion.div>
 
-            <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-serif font-bold text-white mb-8 leading-[1.1] tracking-tight drop-shadow-2xl">
-              {title.split(" ").map((word, i) => (
-                <motion.span
-                  key={i}
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 + i * 0.1, duration: 0.8 }}
-                  className="inline-block mr-2 md:mr-4"
-                >
-                  {word}
-                </motion.span>
-              ))}
-            </h1>
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.6 }}
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-serif font-bold text-white mb-6 leading-tight tracking-tight drop-shadow-lg"
+            >
+              {title}
+            </motion.h1>
             
             <motion.p 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1 }}
-              className="text-base sm:text-lg md:text-2xl text-gray-200 mb-12 max-w-2xl leading-relaxed font-light tracking-wide"
+              transition={{ delay: 0.4, duration: 0.6 }}
+              className="text-lg md:text-xl text-white/90 mb-8 max-w-2xl leading-relaxed"
             >
               {description || subtitle}
             </motion.p>
@@ -113,7 +107,7 @@ export default function Hero() {
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.2 }}
+              transition={{ delay: 0.5, duration: 0.6 }}
               className={`flex flex-col sm:flex-row gap-3 ${alignmentClasses.buttons} px-4`}
             >
               <Link href="/layanan">
@@ -131,16 +125,7 @@ export default function Hero() {
         </div>
       </div>
 
-      {/* Scroll Indicator */}
-      <motion.div 
-        className="absolute bottom-10 left-1/2 -translate-x-1/2 text-white/50 flex flex-col items-center gap-3 cursor-pointer z-10 hover:text-white transition-colors"
-        animate={{ y: [0, 10, 0] }}
-        transition={{ repeat: Infinity, duration: 2 }}
-        onClick={() => window.scrollTo({ top: window.innerHeight, behavior: 'smooth' })}
-      >
-        <span className="text-[10px] uppercase tracking-[0.3em] font-medium">Scroll Down</span>
-        <div className="w-[1px] h-16 bg-gradient-to-b from-white to-transparent" />
-      </motion.div>
+
         </>
       )}
     </section>
