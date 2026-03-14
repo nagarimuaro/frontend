@@ -138,7 +138,43 @@
   .text-balance {
     text-wrap: balance;
   }
-  
+
+  /* Section Spacing Standards */
+  .section-spacing {
+    @apply py-12 md:py-20 lg:py-24;
+  }
+
+  .section-spacing-sm {
+    @apply py-8 md:py-12 lg:py-16;
+  }
+
+  .section-spacing-lg {
+    @apply py-16 md:py-28 lg:py-32;
+  }
+
+  /* Responsive Container Padding */
+  .container-padding {
+    @apply px-4 md:px-8 lg:px-12;
+  }
+
+  /* Card Hover Effects */
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-lg;
+  }
+
+  .card-hover-lift {
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg;
+  }
+
+  /* Text Utilities for Better Hierarchy */
+  .text-subtle {
+    @apply text-muted-foreground;
+  }
+
+  .text-emphasis {
+    @apply font-semibold text-foreground;
+  }
+
   /* Custom Scrollbar for a more premium feel */
   ::-webkit-scrollbar {
     width: 10px;
@@ -148,5 +184,37 @@
   }
   ::-webkit-scrollbar-thumb {
     @apply bg-primary/20 rounded-full hover:bg-primary/40 transition-colors;
+  }
+
+  /* Smooth fade-in animation for content */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .fade-in-up {
+    animation: fadeInUp 0.6s ease-out;
+  }
+
+  /* Staggered animation helper */
+  @keyframes fadeInScale {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .fade-in-scale {
+    animation: fadeInScale 0.4s ease-out;
   }
 }

@@ -29,29 +29,33 @@ export default function Statistics() {
   }
 
   return (
-    <section className="py-12 -mt-24 relative z-20 px-4 md:px-6 pointer-events-none">
+    <section className="section-spacing -mt-24 relative z-20 container-padding pointer-events-none">
       <div className="container mx-auto pointer-events-auto">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
           {statistics.map((stat, index) => (
             <motion.div
               key={stat.label}
               initial={{ opacity: 0, y: 50 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: index * 0.1, type: "spring", stiffness: 100 }}
-              whileHover={{ y: -10, transition: { duration: 0.2 } }}
+              transition={{ delay: index * 0.12, type: "spring", stiffness: 100 }}
+              whileHover={{ y: -8, transition: { duration: 0.3 } }}
             >
-              <Card className="border-none shadow-xl bg-white/90 backdrop-blur-xl h-full overflow-hidden group hover:ring-2 hover:ring-primary/20 transition-all">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-secondary transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
-                <CardContent className="p-6 flex flex-col items-center text-center relative">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/10 to-green-100 flex items-center justify-center text-primary mb-3 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-sm">
-                    <stat.icon size={22} />
+              <Card className="card-hover-lift border-none shadow-lg bg-white/95 backdrop-blur-sm h-full overflow-hidden group hover:shadow-2xl">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-secondary to-primary transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
+                <CardContent className="p-8 flex flex-col items-center text-center relative space-y-4">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/15 to-secondary/10 flex items-center justify-center text-primary mb-2 group-hover:scale-125 group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-md">
+                    <stat.icon size={28} strokeWidth={1.5} />
                   </div>
-                  <h3 className="text-2xl md:text-3xl font-bold text-gray-900 font-serif tracking-tight">
-                    {stat.value}
-                    <span className="text-xs text-gray-500 font-sans ml-1 font-normal">{stat.suffix}</span>
-                  </h3>
-                  <p className="text-xs uppercase tracking-wider text-gray-500 mt-1 font-medium group-hover:text-primary transition-colors">
+                  <div className="flex flex-col items-center gap-1">
+                    <h3 className="text-3xl md:text-4xl font-bold text-foreground font-serif tracking-tight leading-none">
+                      {stat.value}
+                    </h3>
+                    <p className="text-xs text-muted-foreground font-semibold uppercase tracking-widest">
+                      {stat.suffix}
+                    </p>
+                  </div>
+                  <p className="text-sm text-muted-foreground font-medium group-hover:text-primary transition-colors pt-2">
                     {stat.label}
                   </p>
                 </CardContent>

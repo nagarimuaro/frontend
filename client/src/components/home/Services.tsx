@@ -21,13 +21,13 @@ export default function Services() {
   }
 
   return (
-    <section className="py-24 bg-gray-50 relative overflow-hidden">
+    <section className="section-spacing bg-accent relative overflow-hidden">
       {/* Background Decor */}
-      <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-white/50 to-transparent pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -translate-x-1/2 translate-y-1/2" />
+      <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-card/50 to-transparent pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary/8 rounded-full blur-3xl -translate-x-1/2 translate-y-1/2" />
 
-      <div className="container mx-auto px-4 md:px-6 relative z-10">
-        <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
+      <div className="container mx-auto container-padding relative z-10">
+        <div className="flex flex-col md:flex-row justify-between items-end mb-12 md:mb-16 gap-6">
           <motion.div 
             initial={{ opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -38,10 +38,10 @@ export default function Services() {
               <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
               Layanan Digital
             </div>
-            <h2 className="text-4xl md:text-5xl font-serif font-bold text-gray-900 mb-6 leading-tight">
+            <h2 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-4 leading-tight">
               Pengurusan Surat Kini <br/><span className="text-primary italic">Lebih Mudah</span> & Cepat
             </h2>
-            <p className="text-gray-600 leading-relaxed text-lg max-w-xl">
+            <p className="text-muted-foreground leading-relaxed text-base md:text-lg max-w-xl">
               Ajukan permohonan surat keterangan dan administrasi kependudukan lainnya secara online. Hemat waktu, transparan, dan bebas pungli.
             </p>
           </motion.div>
@@ -59,48 +59,48 @@ export default function Services() {
           </motion.div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
           {services.map((service, index) => (
             <motion.div
               key={service.id}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: index * 0.12 }}
             >
-              <Card className="group h-full hover:shadow-xl hover:-translate-y-2 transition-all duration-500 border-none shadow-md bg-white rounded-3xl overflow-hidden relative">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-primary/10 to-transparent rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-150 duration-500" />
+              <Card className="card-hover-lift group h-full border-none shadow-lg bg-card rounded-2xl overflow-hidden relative">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-primary/12 to-transparent rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-125 duration-500" />
                 
-                <CardHeader className="relative pb-2">
-                  <div className="w-14 h-14 rounded-2xl bg-gray-50 text-gray-600 flex items-center justify-center mb-6 group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-sm group-hover:shadow-lg group-hover:shadow-primary/30">
+                <CardHeader className="relative pb-3">
+                  <div className="w-14 h-14 rounded-xl bg-accent text-primary flex items-center justify-center mb-4 group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-sm">
                     <FileText size={28} strokeWidth={1.5} />
                   </div>
-                  <CardTitle className="font-serif text-2xl group-hover:text-primary transition-colors leading-tight min-h-[3.5rem]">
+                  <CardTitle className="font-serif text-xl group-hover:text-primary transition-colors leading-snug min-h-14">
                     {service.name}
                   </CardTitle>
                 </CardHeader>
                 
                 <CardContent>
-                  <p className="text-gray-500 text-sm line-clamp-3 mb-6 leading-relaxed">
+                  <p className="text-muted-foreground text-sm line-clamp-3 mb-5 leading-relaxed">
                     {service.description}
                   </p>
-                  <div className="space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                    <div className="flex items-center gap-3 text-sm text-gray-600">
-                      <Clock size={16} className="text-primary/70" />
+                  <div className="space-y-3 bg-accent/50 p-4 rounded-lg border border-border">
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                      <Clock size={16} className="text-primary/60" />
                       <span className="font-medium">Estimasi: {service.estimated_time}</span>
                     </div>
-                    <div className="flex items-center gap-3 text-sm text-gray-600">
-                      <CreditCard size={16} className="text-primary/70" />
-                      <span className="text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded text-xs uppercase tracking-wide border border-green-100">{service.fee}</span>
+                    <div className="flex items-center gap-3 text-sm">
+                      <CreditCard size={16} className="text-primary/60" />
+                      <span className="text-primary font-bold bg-primary/10 px-2 py-0.5 rounded text-xs uppercase tracking-wide border border-primary/20">{service.fee}</span>
                     </div>
                   </div>
                 </CardContent>
                 
-                <CardFooter className="pt-2">
+                <CardFooter className="pt-4">
                   <Link href={`/layanan?service=${service.slug}`} className="w-full">
-                    <Button className="w-full bg-white text-gray-900 hover:bg-primary hover:text-white border border-gray-200 hover:border-primary transition-all duration-300 shadow-sm rounded-xl h-12 font-bold group/btn justify-between px-6">
+                    <Button className="w-full bg-card text-foreground hover:bg-primary hover:text-primary-foreground border border-border hover:border-primary transition-all duration-300 shadow-sm rounded-lg h-11 font-semibold group/btn justify-between px-5">
                       <span>Ajukan Sekarang</span>
-                      <ChevronRight size={18} className="opacity-50 group-hover/btn:translate-x-1 transition-transform" />
+                      <ChevronRight size={18} className="opacity-60 group-hover/btn:translate-x-1 transition-transform" />
                     </Button>
                   </Link>
                 </CardFooter>
