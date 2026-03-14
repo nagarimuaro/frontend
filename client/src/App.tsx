@@ -1,4 +1,3 @@
-
 import { Switch, Route, useLocation } from "wouter";
 import { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
@@ -23,6 +22,7 @@ import Monografi from "@/pages/monografi";
 import Infografis from "@/pages/infografis";
 import Contact from "@/pages/contact";
 import NotFound from "@/pages/not-found";
+import Verification from "@/pages/verification"; // Add this
 import AIServicePopup from "@/components/shared/AIServicePopup";
 import DynamicHead from "@/components/shared/DynamicHead";
 
@@ -50,6 +50,7 @@ function Router() {
     <AnimatePresence mode="wait">
       <Switch location={location} key={location}>
         <Route path="/" component={Home} />
+        <Route path="/verifikasi-surat/:token" component={Verification} /> {/* Add this */}
         <Route path="/profil">
           <PageWrapper><Profil /></PageWrapper>
         </Route>
