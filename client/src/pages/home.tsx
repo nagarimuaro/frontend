@@ -26,11 +26,9 @@ export default function Home() {
         <Statistics />
         
         {/* Welcome Section / Sambutan Wali Nagari */}
-        <section className="py-24 px-4 md:px-6 relative overflow-hidden">
-          {/* Decorative Background Elements */}
-          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent to-green-50/50 -z-10" />
-          <div className="absolute top-20 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -z-10" />
-          <div className="absolute bottom-20 left-0 w-72 h-72 bg-secondary/5 rounded-full blur-3xl -z-10" />
+        <section className="py-20 md:py-24 px-4 md:px-6 relative overflow-hidden bg-white">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-primary/3 rounded-full blur-3xl -z-10 opacity-40" />
+          <div className="absolute bottom-0 left-0 w-72 h-72 bg-secondary/3 rounded-full blur-3xl -z-10 opacity-40" />
 
           <div className="container mx-auto">
             {isLoadingSambutan ? (
@@ -39,21 +37,20 @@ export default function Home() {
               </div>
             ) : (
               <motion.div 
-                initial={{ opacity: 0, y: 50 }}
+                initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.8 }}
-                className="bg-white rounded-[3rem] p-8 md:p-16 shadow-2xl shadow-gray-200/50 border border-white/50 flex flex-col md:flex-row items-center gap-12 md:gap-20 relative"
+                transition={{ duration: 0.6 }}
+                className="bg-white rounded-2xl p-8 md:p-12 shadow-lg border border-border flex flex-col md:flex-row items-center gap-8 md:gap-12 relative"
               >
                 <div className="w-full md:w-5/12 relative group">
-                  <div className="absolute inset-0 bg-primary rounded-[2.5rem] rotate-6 scale-95 opacity-20 group-hover:rotate-3 transition-transform duration-500" />
-                  <div className="aspect-[4/5] rounded-[2.5rem] overflow-hidden border-8 border-white shadow-xl relative z-10">
+                  <div className="aspect-[4/5] rounded-xl overflow-hidden border-4 border-primary/20 shadow-md">
                     <img 
                       src={sambutan?.foto || "https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=800&auto=format&fit=crop"} 
                       alt={sambutan?.nama || "Wali Nagari"}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-50" />
                     <div className="absolute bottom-0 left-0 w-full p-8 text-white">
                       <p className="font-serif font-bold text-2xl mb-1">{sambutan?.nama || "-"}</p>
                       <div className="h-1 w-12 bg-secondary rounded-full mb-2" />
@@ -87,14 +84,14 @@ export default function Home() {
                     </p>
                   </div>
                   
-                  <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
+                  <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
                     <Link href="/profil">
-                      <Button className="rounded-full h-14 px-8 text-lg font-medium shadow-lg hover:shadow-primary/25 hover:-translate-y-1 transition-all">
-                        Lihat Profil Pemerintahan <ArrowRight className="ml-2 w-5 h-5" />
+                      <Button className="rounded-lg h-11 px-6 text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90">
+                        Lihat Profil Pemerintahan <ArrowRight className="ml-2 w-4 h-4" />
                       </Button>
                     </Link>
                     <Link href="/kontak">
-                      <Button variant="outline" className="rounded-full h-14 px-8 text-lg font-medium border-gray-300 hover:bg-gray-50">
+                      <Button variant="outline" className="rounded-lg h-11 px-6 text-sm font-semibold border-border hover:bg-accent">
                         Hubungi Kami
                       </Button>
                     </Link>
