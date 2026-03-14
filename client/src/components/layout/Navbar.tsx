@@ -199,13 +199,13 @@ export default function Navbar() {
 
           <div className="hidden lg:block">
             <Link href="/layanan">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Button
                   className={cn(
-                    "rounded-full font-medium shadow-lg hover:shadow-xl transition-all border px-6",
+                    "rounded-full font-semibold shadow-md hover:shadow-lg transition-all border h-10 px-6 text-sm",
                     scrolled
-                      ? "bg-gradient-to-r from-primary to-green-600 text-white border-transparent"
-                      : "bg-white/10 backdrop-blur-md text-white border-white/30 hover:bg-white hover:text-primary"
+                      ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90"
+                      : "bg-white/15 backdrop-blur-sm text-white border-white/30 hover:bg-white hover:text-primary"
                   )}
                 >
                   Layanan Online
@@ -280,7 +280,7 @@ export default function Navbar() {
 
               <Link href="/layanan">
                 <Button
-                  className="w-full mt-6 bg-white text-primary hover:bg-gray-100 rounded-full h-14 text-lg font-bold shadow-xl"
+                  className="w-full mt-6 bg-white text-primary hover:bg-gray-100 rounded-lg h-11 font-semibold shadow-md"
                   onClick={() => setIsOpen(false)}
                 >
                   Akses Layanan Online

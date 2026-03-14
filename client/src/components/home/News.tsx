@@ -34,16 +34,16 @@ export default function News() {
   }
 
   return (
-    <section className="py-24 bg-white relative">
-      <div className="container mx-auto px-4 md:px-6">
-        <div className="flex justify-between items-end mb-16">
+    <section className="section-spacing bg-background relative">
+      <div className="container mx-auto container-padding">
+        <div className="flex justify-between items-end mb-12 md:mb-16">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <span className="text-primary font-bold text-sm uppercase tracking-widest mb-3 block opacity-80">Kabar Nagari</span>
-            <h2 className="text-4xl md:text-5xl font-serif font-bold text-gray-900 leading-tight">
+            <span className="text-primary font-bold text-xs uppercase tracking-wider mb-3 block opacity-75">Kabar Nagari</span>
+            <h2 className="text-4xl md:text-5xl font-serif font-bold text-foreground leading-tight">
               Berita & Informasi <span className="text-secondary italic">Terkini</span>
             </h2>
           </motion.div>
@@ -54,105 +54,99 @@ export default function News() {
             viewport={{ once: true }}
           >
             <Link href="/berita">
-              <Button variant="ghost" className="hidden md:flex gap-2 text-primary hover:text-primary/80 hover:bg-primary/5 rounded-full px-6 h-12 font-medium text-lg group">
-                Arsip Berita <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+              <Button variant="ghost" className="hidden md:flex gap-2 text-primary hover:text-primary hover:bg-primary/8 rounded-full px-6 h-11 font-semibold group">
+                Arsip Berita <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
           </motion.div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10">
           {/* Featured News */}
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="group cursor-pointer relative"
+            className="group cursor-pointer relative flex flex-col"
           >
-            <Link href={`/berita/${featured.slug}`}>
-              <div className="relative overflow-hidden rounded-[2rem] aspect-[16/10] mb-8 shadow-2xl">
-                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors z-10" />
+            <Link href={`/berita/${featured.slug}`} className="flex flex-col h-full">
+              <div className="relative overflow-hidden rounded-xl aspect-[16/10] mb-6 shadow-lg flex-shrink-0">
+                <div className="absolute inset-0 bg-black/25 group-hover:bg-black/15 transition-colors z-10 duration-300" />
                 <img 
                   src={featured.featured_image_url || featured.featured_image || "https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=800&auto=format&fit=crop"} 
                   alt={featured.title}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
-                <div className="absolute top-6 left-6 z-20">
+                <div className="absolute top-4 left-4 z-20">
                   <Badge 
-                    className="bg-white/95 hover:bg-white text-gray-900 border-none px-4 py-1.5 text-sm font-bold shadow-lg backdrop-blur-md"
-                    style={{ color: featured.category?.color }}
+                    className="bg-white/95 backdrop-blur-sm text-foreground border-none px-3 py-1 text-xs font-bold shadow-md hover:bg-white transition-colors"
                   >
                     {featured.category?.name || "Berita"}
                   </Badge>
                 </div>
               </div>
               
-              <div className="space-y-4 px-2">
-                <div className="flex items-center gap-6 text-sm text-gray-500 font-medium border-b border-gray-100 pb-4">
-                  <span className="flex items-center gap-2"><Calendar size={16} className="text-primary" /> {formatDate(featured.published_at)}</span>
-                  <span className="flex items-center gap-2"><User size={16} className="text-primary" /> Admin Nagari</span>
+              <div className="space-y-4 flex flex-col flex-1">
+                <div className="flex items-center gap-4 text-xs text-muted-foreground font-medium border-b border-border pb-4">
+                  <span className="flex items-center gap-1.5"><Calendar size={14} className="text-primary" /> {formatDate(featured.published_at)}</span>
+                  <span className="flex items-center gap-1.5"><User size={14} className="text-primary" /> Admin Nagari</span>
                 </div>
                 
-                <h3 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 group-hover:text-primary transition-colors leading-tight">
+                <h3 className="text-2xl md:text-3xl font-serif font-bold text-foreground group-hover:text-primary transition-colors leading-snug">
                   {featured.title}
                 </h3>
                 
-                <p className="text-gray-600 line-clamp-3 text-lg leading-relaxed">
+                <p className="text-muted-foreground line-clamp-3 text-base leading-relaxed flex-1">
                   {featured.excerpt}
                 </p>
                 
-                <Button variant="link" className="p-0 h-auto text-primary font-bold text-lg group-hover:underline decoration-2 underline-offset-4 flex items-center gap-2 mt-2">
-                  Baca Selengkapnya <ChevronRight size={18} />
+                <Button variant="link" className="p-0 h-auto text-primary font-semibold group-hover:underline decoration-2 underline-offset-4 flex items-center gap-2 mt-2 w-fit">
+                  Baca Selengkapnya <ChevronRight size={16} />
                 </Button>
               </div>
             </Link>
           </motion.div>
 
           {/* Other News List */}
-          <div className="flex flex-col gap-8 justify-center">
+          <div className="flex flex-col gap-6">
             {others.map((item, index) => (
               <motion.div 
                 key={item.id}
                 initial={{ opacity: 0, x: 20 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                className="flex gap-6 group cursor-pointer items-center p-4 rounded-3xl hover:bg-gray-50 transition-colors"
+                transition={{ delay: index * 0.12 }}
+                className="flex gap-5 group cursor-pointer items-start p-4 rounded-lg hover:bg-accent transition-all hover:shadow-sm"
               >
-                <Link href={`/berita/${item.slug}`} className="flex gap-6 items-center w-full">
-                  <div className="w-1/3 aspect-[4/3] rounded-2xl overflow-hidden shrink-0 shadow-md relative">
+                <Link href={`/berita/${item.slug}`} className="flex gap-5 items-start w-full">
+                  <div className="w-32 aspect-[4/3] rounded-lg overflow-hidden shrink-0 shadow-md relative flex-shrink-0">
                     <img 
                       src={item.featured_image_url || item.featured_image || "https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=800&auto=format&fit=crop"}
                       alt={item.title}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
-                    <div className="absolute top-2 left-2">
+                    <div className="absolute top-2 left-2 z-10">
                        <Badge 
-                         className="bg-white/90 text-xs text-gray-900 border-none shadow-sm backdrop-blur-sm px-2 py-0.5"
-                         style={{ color: item.category?.color }}
+                         className="bg-white/90 text-xs text-foreground border-none shadow-sm backdrop-blur-sm px-2 py-0.5 hover:bg-white transition-colors"
                        >
                           {item.category?.name || "Berita"}
                        </Badge>
                     </div>
                   </div>
                   
-                  <div className="flex-1 space-y-3">
-                    <div className="flex items-center gap-3 text-xs text-gray-500 font-medium">
-                      <span className="flex items-center gap-1"><Calendar size={12} /> {formatDate(item.published_at)}</span>
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
+                      <Calendar size={12} /> {formatDate(item.published_at)}
                     </div>
                     
-                    <h4 className="text-xl font-serif font-bold text-gray-900 group-hover:text-primary transition-colors line-clamp-2 leading-tight">
+                    <h4 className="text-lg font-serif font-bold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-snug">
                       {item.title}
                     </h4>
                     
-                    <p className="text-sm text-gray-600 line-clamp-2 hidden sm:block leading-relaxed">
+                    <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
                       {item.excerpt}
                     </p>
-                    
-                    <span className="text-sm font-bold text-primary flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                      Baca <ArrowRight size={14} />
-                    </span>
                   </div>
                 </Link>
               </motion.div>

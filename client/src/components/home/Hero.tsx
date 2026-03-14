@@ -114,15 +114,15 @@ export default function Hero() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1.2 }}
-              className={`flex flex-col sm:flex-row gap-4 ${alignmentClasses.buttons} px-4`}
+              className={`flex flex-col sm:flex-row gap-3 ${alignmentClasses.buttons} px-4`}
             >
               <Link href="/layanan">
-                <Button size="lg" className="bg-secondary hover:bg-secondary/90 text-white rounded-full px-8 h-14 text-lg font-medium shadow-xl shadow-secondary/20 hover:scale-105 transition-all duration-300 w-full sm:w-auto">
+                <Button size="lg" className="bg-secondary hover:bg-secondary/90 text-white rounded-lg px-6 h-12 font-semibold shadow-lg shadow-secondary/25 hover:shadow-xl transition-all duration-300 w-full sm:w-auto">
                   Jelajahi Layanan <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </Link>
               <Link href={buttonUrl}>
-                <Button size="lg" variant="outline" className="bg-white/5 hover:bg-white/10 text-white border-white/30 rounded-full px-8 h-14 text-lg font-medium backdrop-blur-sm hover:scale-105 transition-all duration-300 w-full sm:w-auto">
+                <Button size="lg" variant="outline" className="bg-white/10 hover:bg-white/15 text-white border-white/40 rounded-lg px-6 h-12 font-semibold backdrop-blur-sm hover:shadow-lg transition-all duration-300 w-full sm:w-auto">
                   <Play className="mr-2 w-5 h-5 fill-current" /> {buttonText}
                 </Button>
               </Link>
