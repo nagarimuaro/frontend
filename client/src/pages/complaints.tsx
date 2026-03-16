@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { 
@@ -15,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { useComplaintCategories, useComplaintStats, useSubmitComplaint, useTrackComplaint } from "@/lib/api";
 import PageHeader from "@/components/layout/PageHeader";
+import PageBackground from "@/components/layout/PageBackground";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useToast } from "@/hooks/use-toast";
@@ -125,7 +125,7 @@ export default function Complaints() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <PageBackground>
       <Navbar />
       <PageHeader 
         title="Layanan Pengaduan" 
@@ -133,48 +133,59 @@ export default function Complaints() {
         image={complaintImage}
       />
       
-      <div className="container mx-auto px-4 py-12">
-        <div className="max-w-3xl mx-auto">
-          {/* Track Complaint Section */}
-          <Card className="mb-8 border-none shadow-md">
-            <CardContent className="p-6">
-              <h3 className="font-bold text-lg mb-4">Lacak Status Pengaduan</h3>
-              <div className="flex gap-4">
+      <div className="container mx-auto px-4 py-16 md:py-24">
+        <div className="max-w-3xl mx-auto space-y-12">
+          {/* Card untuk Lacak Laporan */}
+          <Card className="bg-white/80 dark:bg-[#0b2023]/60 backdrop-blur-md border border-black/5 dark:border-white/10 shadow-lg relative overflow-hidden rounded-3xl">
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-teal-600/5 dark:bg-[#3fd5ba]/5 rounded-full blur-[50px] pointer-events-none" />
+            <CardContent className="p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <Search className="text-teal-600 dark:text-[#3fd5ba] w-5 h-5" />
+                <h3 className="font-serif font-bold text-xl text-slate-800 dark:text-white">Lacak Status Pengaduan</h3>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-4 relative z-10 w-full">
                 <Input 
-                  placeholder="Masukkan ID Pengaduan..." 
+                  placeholder="Ketik ID Pengaduan Anda..." 
                   value={trackingId}
                   onChange={(e) => setTrackingId(e.target.value)}
-                  className="flex-1"
+                  className="flex-1 bg-white/5 border-black/5 dark:border-white/10 text-slate-800 dark:text-white placeholder:text-slate-600 dark:text-white/30 h-12 rounded-xl focus:border-teal-300 dark:border-[#3fd5ba]/50 focus:bg-white/10 transition-colors"
                 />
-                <Button onClick={handleTrackComplaint} disabled={isTracking}>
-                  {isTracking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4 mr-2" />}
+                <Button 
+                  onClick={handleTrackComplaint} 
+                  disabled={isTracking}
+                  className="bg-teal-500 dark:bg-[#3fd5ba] hover:bg-teal-600 dark:hover:bg-white text-white dark:text-[#0a1a1c] h-12 px-8 rounded-xl shrink-0 font-bold uppercase tracking-wider text-xs shadow-sm dark:shadow-[0_0_15px_rgba(63,213,186,0.3)]"
+                >
+                  {isTracking ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Search className="w-4 h-4 mr-2" />}
                   Lacak
                 </Button>
               </div>
+              
+              {/* Hasil Lacak */}
               {trackedComplaint?.data && (
                 <motion.div 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-4 p-4 bg-gray-50 rounded-lg"
+                  className="mt-6 p-6 bg-[#143236] border border-teal-300 dark:border-[#3fd5ba]/20 rounded-2xl"
                 >
-                  <div className="flex justify-between items-start">
+                  <div className="flex flex-col sm:flex-row sm:justify-between items-start gap-4">
                     <div>
-                      <p className="font-bold text-gray-900">{trackedComplaint.data.judul}</p>
-                      <p className="text-sm text-gray-500 mt-1">Kategori: {trackedComplaint.data.kategori}</p>
+                      <p className="font-bold text-slate-800 dark:text-white text-lg">{trackedComplaint.data.judul}</p>
+                      <p className="text-sm text-slate-600 dark:text-white/50 mt-1 uppercase tracking-widest font-bold text-[10px]">Kategori: {trackedComplaint.data.kategori}</p>
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                      trackedComplaint.data.status === 'Selesai' ? 'bg-green-100 text-green-700' :
-                      trackedComplaint.data.status === 'Diproses' ? 'bg-blue-100 text-blue-700' :
-                      trackedComplaint.data.status === 'Ditolak' ? 'bg-red-100 text-red-700' :
-                      'bg-yellow-100 text-yellow-700'
+                    <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest shadow-lg ${
+                      trackedComplaint.data.status === 'Selesai' ? 'bg-teal-500 dark:bg-[#3fd5ba] text-white dark:text-[#0a1a1c]' :
+                      trackedComplaint.data.status === 'Diproses' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50' :
+                      trackedComplaint.data.status === 'Ditolak' ? 'bg-red-500/20 text-red-400 border border-red-500/50' :
+                      'bg-yellow-500/20 text-yellow-500 border border-yellow-500/50'
                     }`}>
                       {trackedComplaint.data.status}
                     </span>
                   </div>
                   {trackedComplaint.data.tanggapan && (
-                    <div className="mt-3 p-3 bg-white rounded border">
-                      <p className="text-sm font-medium text-gray-700">Tanggapan:</p>
-                      <p className="text-sm text-gray-600">{trackedComplaint.data.tanggapan}</p>
+                    <div className="mt-5 p-5 bg-slate-50 dark:bg-[#0a1a1c] rounded-xl border border-black/5 dark:border-white/5">
+                      <p className="text-xs uppercase tracking-widest font-bold text-teal-600 dark:text-[#3fd5ba] mb-2">Tanggapan Resmi:</p>
+                      <p className="text-sm text-slate-600 dark:text-white/80 leading-relaxed font-light">{trackedComplaint.data.tanggapan}</p>
                     </div>
                   )}
                 </motion.div>
@@ -182,24 +193,30 @@ export default function Complaints() {
             </CardContent>
           </Card>
           
-          {/* Success Message */}
+          {/* Laporan Berhasil Dikirim */}
           {submitSuccess && submittedId && (
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="mb-8 p-6 bg-green-50 border border-green-200 rounded-xl"
+              className="p-8 bg-[#143236] border border-teal-300 dark:border-[#3fd5ba]/50 rounded-3xl shadow-[0_0_30px_rgba(63,213,186,0.1)] text-center"
             >
-              <div className="flex items-center gap-4">
-                <CheckCircle2 className="w-12 h-12 text-green-600" />
-                <div>
-                  <h3 className="font-bold text-green-800 text-lg">Laporan Berhasil Dikirim!</h3>
-                  <p className="text-green-700">ID Pengaduan Anda: <span className="font-mono font-bold">{submittedId}</span></p>
-                  <p className="text-sm text-green-600 mt-1">Simpan ID ini untuk melacak status pengaduan Anda.</p>
-                </div>
+              <div className="w-20 h-20 mx-auto bg-teal-600/10 dark:bg-[#3fd5ba]/10 rounded-full flex items-center justify-center mb-6">
+                 <CheckCircle2 className="w-10 h-10 text-teal-600 dark:text-[#3fd5ba]" />
               </div>
+              <h3 className="font-serif font-bold text-slate-800 dark:text-white text-2xl mb-2">Laporan Berhasil Terkirim!</h3>
+              <p className="text-slate-600 dark:text-white/60 font-light mb-6">Terima kasih atas aspirasi Anda. ID Pengaduan Anda:</p>
+              
+              <div className="bg-slate-50 dark:bg-[#0a1a1c] p-4 rounded-xl border border-black/5 dark:border-white/10 inline-block mb-8">
+                 <span className="font-mono text-2xl font-bold text-teal-600 dark:text-[#3fd5ba] tracking-widest">{submittedId}</span>
+              </div>
+              
+              <p className="text-xs text-slate-600 dark:text-white/40 uppercase tracking-widest font-bold mb-8">
+                *Simpan ID ini untuk melacak status respon dari Nagari
+              </p>
+
               <Button 
                 variant="outline" 
-                className="mt-4"
+                className="rounded-full bg-white/5 border-black/5 dark:border-white/10 text-slate-800 dark:text-white hover:bg-teal-600/20 dark:bg-[#3fd5ba]/20 hover:text-teal-600 dark:text-[#3fd5ba] transition-colors"
                 onClick={() => { setSubmitSuccess(false); setSubmittedId(null); }}
               >
                 Buat Laporan Baru
@@ -207,69 +224,75 @@ export default function Complaints() {
             </motion.div>
           )}
           
+          {/* Formulir */}
           {!submitSuccess && (
-          <Card className="border-t-4 border-t-primary shadow-lg">
-            <CardHeader className="text-center pb-8">
-              <CardTitle className="text-2xl font-serif">Formulir Pengaduan Masyarakat</CardTitle>
-              <CardDescription>
-                Silakan isi formulir di bawah ini dengan data yang valid.
+          <Card className="bg-white/80 dark:bg-[#0b2023]/60 backdrop-blur-md shadow-2xl rounded-[2.5rem] border border-black/5 dark:border-white/10 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#3fd5ba] to-transparent" />
+            
+            <CardHeader className="text-center pb-8 pt-12 relative z-10 border-b border-black/5 dark:border-white/5">
+              <CardTitle className="text-3xl font-serif text-slate-800 dark:text-white mb-3">Formulir Pengaduan</CardTitle>
+              <CardDescription className="text-slate-600 dark:text-white/50 text-base font-light">
+                Silakan isi formulir di bawah dengan data valid agar kami mudah menindaklanjuti.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <form className="space-y-6" onSubmit={handleSubmit}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Nama Lengkap (Opsional)</label>
+            <CardContent className="p-8 md:p-12 relative z-10">
+              <form className="space-y-8" onSubmit={handleSubmit}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-bold text-slate-600 dark:text-white/50 uppercase tracking-widest">Nama Lengkap (Opsional)</label>
                     <Input 
                       name="nama"
                       value={formData.nama}
                       onChange={handleInputChange}
-                      placeholder="Nama pelapor" 
+                      placeholder="Identitas Anda..." 
+                      className="bg-white/5 border-black/5 dark:border-white/10 text-slate-800 dark:text-white placeholder:text-slate-600 dark:text-white/20 rounded-xl h-12 focus:border-teal-300 dark:border-[#3fd5ba]/50 transition-colors"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">NIK (Opsional)</label>
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-bold text-slate-600 dark:text-white/50 uppercase tracking-widest">NIK (Opsional)</label>
                     <Input 
                       name="nik"
                       value={formData.nik}
                       onChange={handleInputChange}
-                      placeholder="Nomor Induk Kependudukan" 
+                      placeholder="16 Digit NIK..." 
+                      className="bg-white/5 border-black/5 dark:border-white/10 text-slate-800 dark:text-white placeholder:text-slate-600 dark:text-white/20 rounded-xl h-12 focus:border-teal-300 dark:border-[#3fd5ba]/50 transition-colors"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Nomor WhatsApp (Opsional)</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                   <div className="space-y-3">
+                    <label className="text-[10px] font-bold text-slate-600 dark:text-white/50 uppercase tracking-widest">Nomor WhatsApp (Opsional)</label>
                     <Input 
                       name="whatsapp"
                       value={formData.whatsapp}
                       onChange={handleInputChange}
                       placeholder="08xxxxxxxxxx" 
+                      className="bg-white/5 border-black/5 dark:border-white/10 text-slate-800 dark:text-white placeholder:text-slate-600 dark:text-white/20 rounded-xl h-12 focus:border-teal-300 dark:border-[#3fd5ba]/50 transition-colors"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Kategori Pengaduan <span className="text-red-500">*</span></label>
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-bold text-teal-600 dark:text-[#3fd5ba] uppercase tracking-widest flex items-center gap-1">Kategori Laporan <span className="text-red-400">*</span></label>
                     <Select value={formData.kategori} onValueChange={handleCategoryChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder={categoriesLoading ? "Memuat..." : "Pilih kategori"} />
+                      <SelectTrigger className="bg-white/5 border-black/5 dark:border-white/10 text-slate-800 dark:text-white rounded-xl h-12 focus:border-teal-300 dark:border-[#3fd5ba]/50 focus:ring-0">
+                        <SelectValue placeholder={categoriesLoading ? "Memuat..." : "-- Pilih Kategori --"} />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-white dark:bg-[#0b2023] border border-black/5 dark:border-white/10 text-slate-800 dark:text-white rounded-xl shadow-xl">
                         {categoriesLoading ? (
                           <SelectItem value="loading" disabled>Memuat...</SelectItem>
                         ) : Array.isArray(categories) && categories.length > 0 ? (
                           categories.map((cat: any, idx: number) => (
-                            <SelectItem key={idx} value={typeof cat === 'string' ? cat : (cat.slug || cat.name || String(idx))}>
+                            <SelectItem key={idx} value={typeof cat === 'string' ? cat : (cat.slug || cat.name || String(idx))} className="focus:bg-white/10 focus:text-slate-800 dark:text-white cursor-pointer py-3 rounded-lg mx-1">
                               {typeof cat === 'string' ? cat : (cat.name || cat)}
                             </SelectItem>
                           ))
                         ) : (
                           <>
-                            <SelectItem value="Infrastruktur">Infrastruktur & Pembangunan</SelectItem>
-                            <SelectItem value="Pelayanan">Pelayanan Publik</SelectItem>
-                            <SelectItem value="Keamanan">Keamanan & Ketertiban</SelectItem>
-                            <SelectItem value="Kebersihan">Kebersihan</SelectItem>
-                            <SelectItem value="Lainnya">Lainnya</SelectItem>
+                            <SelectItem value="Infrastruktur" className="focus:bg-white/10 focus:text-slate-800 dark:text-white cursor-pointer py-3 rounded-lg mx-1">Infrastruktur & Pembangunan</SelectItem>
+                            <SelectItem value="Pelayanan" className="focus:bg-white/10 focus:text-slate-800 dark:text-white cursor-pointer py-3 rounded-lg mx-1">Pelayanan Publik</SelectItem>
+                            <SelectItem value="Keamanan" className="focus:bg-white/10 focus:text-slate-800 dark:text-white cursor-pointer py-3 rounded-lg mx-1">Keamanan & Ketertiban</SelectItem>
+                            <SelectItem value="Kebersihan" className="focus:bg-white/10 focus:text-slate-800 dark:text-white cursor-pointer py-3 rounded-lg mx-1">Kebersihan</SelectItem>
+                            <SelectItem value="Lainnya" className="focus:bg-white/10 focus:text-slate-800 dark:text-white cursor-pointer py-3 rounded-lg mx-1">Lainnya</SelectItem>
                           </>
                         )}
                       </SelectContent>
@@ -277,43 +300,52 @@ export default function Complaints() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Judul Laporan <span className="text-red-500">*</span></label>
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-teal-600 dark:text-[#3fd5ba] uppercase tracking-widest flex items-center gap-1">Judul Laporan <span className="text-red-400">*</span></label>
                   <Input 
                     name="judul"
                     value={formData.judul}
                     onChange={handleInputChange}
-                    placeholder="Inti permasalahan" 
+                    placeholder="Contoh: Lampu penerangan jalan RT 01 mati total" 
                     required
+                    className="bg-white/5 border-black/5 dark:border-white/10 text-slate-800 dark:text-white placeholder:text-slate-600 dark:text-white/20 rounded-xl h-12 focus:border-teal-300 dark:border-[#3fd5ba]/50 transition-colors"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Isi Laporan <span className="text-red-500">*</span></label>
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-teal-600 dark:text-[#3fd5ba] uppercase tracking-widest flex items-center gap-1">Isi Laporan Spesifik <span className="text-red-400">*</span></label>
                   <Textarea 
                     name="deskripsi"
                     value={formData.deskripsi}
                     onChange={handleInputChange}
-                    placeholder="Jelaskan kronologi atau detail permasalahan secara lengkap..." 
-                    className="min-h-[150px]" 
+                    placeholder="Sebutkan detail, lokasi yang jelas, waktu kejadian, dll..." 
+                    className="min-h-[160px] bg-white/5 border-black/5 dark:border-white/10 text-slate-800 dark:text-white placeholder:text-slate-600 dark:text-white/20 rounded-xl p-4 focus:border-teal-300 dark:border-[#3fd5ba]/50 transition-colors resize-none" 
                     required
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Lampiran Bukti (Opsional)</label>
-                  <Input type="file" />
-                  <p className="text-xs text-muted-foreground">Format: JPG, PNG, PDF. Max: 5MB.</p>
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-slate-600 dark:text-white/50 uppercase tracking-widest">Lampiran Bukti Foto/PDF (Opsional)</label>
+                  <div className="relative group/upload">
+                    <Input type="file" className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10" />
+                    <div className="bg-white/5 border border-dashed border-black/5 dark:border-white/20 group-hover/upload:border-teal-300 dark:border-[#3fd5ba]/50 group-hover/upload:bg-teal-600/5 dark:bg-[#3fd5ba]/5 rounded-xl text-center py-6 px-4 transition-all flex flex-col items-center justify-center">
+                       <Send className="w-8 h-8 text-slate-600 dark:text-white/30 mb-2 group-hover/upload:text-teal-600 dark:text-[#3fd5ba] transition-colors" />
+                       <span className="text-slate-600 dark:text-white/60 text-sm group-hover/upload:text-slate-800 dark:text-white">Klik atau seret file ke sini</span>
+                       <span className="text-slate-600 dark:text-white/30 text-xs mt-1">Format: JPG/PNG/PDF (Maks 5MB)</span>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex gap-3 text-yellow-800 text-sm">
-                  <AlertTriangle className="shrink-0 w-5 h-5" />
-                  <p>Dengan mengirimkan laporan ini, saya menyatakan bahwa data yang saya sampaikan adalah benar dan dapat dipertanggungjawabkan.</p>
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-5 flex gap-4 text-yellow-500/80 text-sm">
+                  <AlertTriangle className="shrink-0 w-5 h-5 text-yellow-500 mt-0.5" />
+                  <p className="font-light leading-relaxed">
+                    Dengan mengirimkan laporan ini, saya bersedia mempertanggungjawabkan data yang disampaikan. Identitas Anda akan dirahasiakan jika diperlukan.
+                  </p>
                 </div>
 
                 <Button 
                   type="submit" 
-                  className="w-full bg-primary hover:bg-primary/90 h-12 text-lg"
+                  className="w-full bg-teal-500 dark:bg-[#3fd5ba] hover:bg-teal-600 dark:hover:bg-white text-white dark:text-[#0a1a1c] h-14 rounded-xl shadow-[0_0_20px_rgba(63,213,186,0.3)] transition-all uppercase tracking-widest font-bold text-sm hover:-translate-y-1"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
@@ -322,7 +354,7 @@ export default function Complaints() {
                     </>
                   ) : (
                     <>
-                      <Send className="mr-2 h-5 w-5" /> Kirim Laporan
+                      <Send className="mr-2 h-5 w-5" /> Kirim Laporan Sekarang
                     </>
                   )}
                 </Button>
@@ -331,32 +363,25 @@ export default function Complaints() {
           </Card>
           )}
 
-          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-            <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-              <div className="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                <Send size={24} />
+          {/* How It Works Steps */}
+          <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+            {[
+               { icon: Send, title: "1. Kirim Laporan", desc: "Sampaikan aspirasi dengan detail valid." },
+               { icon: CheckCircle2, title: "2. Verifikasi Info", desc: "Admin cek validitas (Maks 2x24 Jam)." },
+               { icon: AlertTriangle, title: "3. Tindak Lanjut", desc: "Pihak Nagari eksekusi & beri respon." }
+            ].map((step, idx) => (
+              <div key={idx} className="bg-white/80 dark:bg-[#0b2023]/40 backdrop-blur border border-black/5 dark:border-white/5 rounded-2xl p-6 text-center group hover:bg-white/5 hover:border-black/5 dark:border-white/10 transition-all">
+                <div className="w-14 h-14 mx-auto rounded-full bg-white/5 flex items-center justify-center text-slate-600 dark:text-white/50 mb-5 group-hover:scale-110 group-hover:text-teal-600 dark:text-[#3fd5ba] group-hover:bg-teal-600/10 dark:bg-[#3fd5ba]/10 transition-all duration-300">
+                   <step.icon size={24} />
+                </div>
+                <h3 className="text-slate-800 dark:text-white font-bold text-lg mb-2">{step.title}</h3>
+                <p className="text-slate-600 dark:text-white/40 text-sm font-light leading-relaxed">{step.desc}</p>
               </div>
-              <h3 className="font-bold text-gray-900 mb-2">1. Kirim Laporan</h3>
-              <p className="text-sm text-gray-500">Isi formulir pengaduan dengan lengkap dan jelas.</p>
-            </div>
-            <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-              <div className="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 size={24} />
-              </div>
-              <h3 className="font-bold text-gray-900 mb-2">2. Verifikasi</h3>
-              <p className="text-sm text-gray-500">Admin akan memverifikasi laporan Anda (Max 2x24 Jam).</p>
-            </div>
-             <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-              <div className="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                <AlertTriangle size={24} />
-              </div>
-              <h3 className="font-bold text-gray-900 mb-2">3. Tindak Lanjut</h3>
-              <p className="text-sm text-gray-500">Laporan ditindaklanjuti oleh instansi terkait.</p>
-            </div>
+            ))}
           </div>
         </div>
       </div>
       <Footer />
-    </div>
+    </PageBackground>
   );
 }

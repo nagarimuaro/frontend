@@ -33,6 +33,7 @@ export const PUBLIC_API = {
   UMKM_SUBMIT: `${API_BASE_URL}/api/public/umkm/submit`,
   UMKM_STATUS: (id: string) => `${API_BASE_URL}/api/public/umkm/status/${id}`,
   LOCATION_INFO: `${API_BASE_URL}/api/public/location-info`,
+  KEUANGAN: `${API_BASE_URL}/api/public/keuangan-nagari`,
 };
 
 // Pelayanan & Pengaduan API Endpoints

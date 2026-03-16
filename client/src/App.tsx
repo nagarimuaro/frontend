@@ -25,6 +25,7 @@ import NotFound from "@/pages/not-found";
 import Verification from "@/pages/verification"; // Add this
 import AIServicePopup from "@/components/shared/AIServicePopup";
 import DynamicHead from "@/components/shared/DynamicHead";
+import { ThemeProvider } from "@/components/theme-provider";
 
 // Wrapper for page transitions
 const PageWrapper = ({ children }: { children: React.ReactNode }) => (
@@ -101,14 +102,16 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <DynamicHead />
-        <Toaster />
-        <Router />
-        <AIServicePopup />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ThemeProvider defaultTheme="dark" storageKey="sinta-ui-theme">
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <DynamicHead />
+          <Toaster />
+          <Router />
+          <AIServicePopup />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 

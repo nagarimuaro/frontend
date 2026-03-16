@@ -1,14 +1,14 @@
-
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { 
-  Calendar, User, Tag, ChevronRight, Search, Clock, ArrowUpRight, Loader2, Newspaper, X
+  Calendar, User, Tag, Search, Clock, ArrowUpRight, Loader2, Newspaper, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useNews, useCategories } from "@/lib/api";
 import PageHeader from "@/components/layout/PageHeader";
+import PageBackground from "@/components/layout/PageBackground";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Link } from "wouter";
@@ -74,19 +74,19 @@ export default function News() {
 
   if (newsLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <PageBackground>
         <Navbar />
-        <div className="flex items-center justify-center py-32">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <span className="ml-2 text-gray-600">Memuat berita...</span>
+        <div className="flex items-center justify-center py-32 space-x-3 min-h-[70vh]">
+          <div className="w-8 h-8 rounded-full border-b-2 border-teal-300 dark:border-[#3fd5ba] animate-spin" />
+          <span className="text-teal-600 dark:text-[#3fd5ba] uppercase tracking-widest text-xs font-bold">Memuat berita...</span>
         </div>
         <Footer />
-      </div>
+      </PageBackground>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <PageBackground>
       <Navbar />
       <PageHeader 
         title="Berita & Informasi" 
@@ -94,17 +94,17 @@ export default function News() {
         image={newsHeaderImage}
       />
       
-      <div className="container mx-auto px-4 py-12">
+      <div className="container mx-auto px-4 py-16 md:py-24">
         <div className="flex flex-col lg:flex-row gap-12">
           {/* Main Content */}
           <div className="w-full lg:w-2/3">
             {/* Filter Result Counter */}
-            <div className="flex items-center justify-between mb-6">
-              <p className="text-gray-600">
-                Menampilkan <span className="font-bold text-primary">{filteredNews.length}</span> dari {news.length} berita
+            <div className="flex items-center justify-between mb-8 pb-6 border-b border-black/5 dark:border-white/10">
+              <p className="text-slate-600 dark:text-white/60 font-light">
+                Menampilkan <span className="font-bold text-teal-600 dark:text-[#3fd5ba]">{filteredNews.length}</span> dari {news.length} berita
                 {(searchQuery || selectedCategory !== "all" || selectedTag) && (
-                  <span className="text-sm ml-2">
-                    {searchQuery && <span className="text-gray-500">(pencarian: "{searchQuery}")</span>}
+                  <span className="text-xs ml-2 text-slate-600 dark:text-white/40">
+                    {searchQuery && <span>(pencarian: "{searchQuery}")</span>}
                   </span>
                 )}
               </p>
@@ -113,7 +113,7 @@ export default function News() {
                   variant="ghost" 
                   size="sm" 
                   onClick={() => { setSearchQuery(""); setSelectedCategory("all"); setSelectedTag(""); }}
-                  className="text-gray-500 hover:text-primary"
+                  className="text-slate-600 dark:text-white/50 hover:text-rose-400 hover:bg-rose-500/10 rounded-full transition-colors"
                 >
                   <X className="w-4 h-4 mr-1" /> Reset Filter
                 </Button>
@@ -121,15 +121,15 @@ export default function News() {
             </div>
 
             {filteredNews.length === 0 ? (
-              <div className="text-center py-16 bg-gray-50 rounded-3xl">
-                <Newspaper className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-600 text-lg">
+              <div className="text-center py-20 bg-white/80 dark:bg-[#0b2023]/60 backdrop-blur-md rounded-3xl border border-black/5 dark:border-white/10 shadow-lg">
+                <Newspaper className="w-16 h-16 mx-auto text-slate-600 dark:text-white/20 mb-4" />
+                <p className="text-slate-600 dark:text-white/50 text-lg font-light">
                   {news.length === 0 ? "Belum ada berita tersedia" : "Tidak ada berita yang cocok dengan filter"}
                 </p>
                 {(searchQuery || selectedCategory !== "all" || selectedTag) && (
                   <Button 
                     variant="outline" 
-                    className="mt-4"
+                    className="mt-6 rounded-full border-black/5 dark:border-white/20 text-slate-800 dark:text-white hover:bg-white/10"
                     onClick={() => { setSearchQuery(""); setSelectedCategory("all"); setSelectedTag(""); }}
                   >
                     Reset Filter
@@ -147,61 +147,61 @@ export default function News() {
                   <motion.div 
                     key={newsItem.id}
                     variants={item}
-                    whileHover={{ y: -5, scale: 1.01 }}
-                    className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-xl transition-all duration-300 flex flex-col md:flex-row group h-full md:h-[280px]"
+                    whileHover={{ y: -8, scale: 1.01 }}
+                    className="bg-white/80 dark:bg-[#0b2023]/80 backdrop-blur-md rounded-3xl overflow-hidden shadow-lg border border-black/5 dark:border-white/10 hover:border-teal-300 dark:border-[#3fd5ba]/30 transition-all duration-300 flex flex-col md:flex-row group h-full md:h-[280px]"
                   >
-                    <Link href={`/berita/${newsItem.slug}`} className="md:w-5/12 h-64 md:h-auto relative overflow-hidden">
-                      {(newsItem.featured_image_url || newsItem.featured_image) ? (
+                    <Link href={`/berita/${newsItem.slug}`} className="md:w-5/12 h-64 md:h-auto relative overflow-hidden block">
+                      {((newsItem as any).featured_image_url || newsItem.featured_image) ? (
                         <img 
-                          src={newsItem.featured_image_url || newsItem.featured_image} 
+                          src={(newsItem as any).featured_image_url || newsItem.featured_image} 
                           alt={newsItem.title} 
-                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-80 group-hover:opacity-100"
                         />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center">
-                          <Newspaper className="w-16 h-16 text-primary/60" />
+                        <div className="w-full h-full bg-[#123136] flex items-center justify-center">
+                          <Newspaper className="w-16 h-16 text-teal-600/20 dark:text-[#3fd5ba]/20" />
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#0a1a1c]/80 via-transparent to-transparent opacity-80 group-hover:opacity-50 transition-opacity" />
                       {newsItem.category && (
                         <div className="absolute top-4 left-4">
-                          <Badge className="bg-primary text-white border-none shadow-md px-3 py-1">
+                          <Badge className="bg-teal-600/10 dark:bg-[#3fd5ba]/10 backdrop-blur-md text-teal-600 dark:text-[#3fd5ba] border border-teal-300 dark:border-[#3fd5ba]/30 shadow-lg shadow-black/50 px-3 py-1 font-bold uppercase tracking-wider text-[10px]">
                             {typeof newsItem.category === 'object' ? newsItem.category.name : newsItem.category}
                           </Badge>
                         </div>
                       )}
                     </Link>
                     <div className="p-8 md:w-7/12 flex flex-col justify-center relative">
-                      <div className="flex items-center gap-4 text-xs text-gray-500 mb-4 uppercase tracking-wider font-medium">
+                      <div className="flex items-center gap-4 text-[10px] text-slate-600 dark:text-white/50 mb-4 uppercase tracking-[0.2em] font-bold">
                         <span className="flex items-center gap-1.5">
-                          <Calendar size={14} className="text-primary" /> 
+                          <Calendar size={14} className="text-teal-600 dark:text-[#3fd5ba]" /> 
                           {formatDate(newsItem.published_at || newsItem.created_at || '')}
                         </span>
                         {newsItem.author && (
                           <>
-                            <span className="w-1 h-1 rounded-full bg-gray-300" />
+                            <span className="w-1 h-1 rounded-full bg-white/20" />
                             <span className="flex items-center gap-1.5">
-                              <User size={14} className="text-primary" /> {typeof newsItem.author === 'object' ? (newsItem.author as any).name : newsItem.author}
+                              <User size={14} className="text-teal-600 dark:text-[#3fd5ba]" /> {typeof newsItem.author === 'object' ? (newsItem.author as any).name : newsItem.author}
                             </span>
                           </>
                         )}
                       </div>
                       <Link href={`/berita/${newsItem.slug}`}>
-                        <h3 className="text-2xl font-serif font-bold text-gray-900 mb-4 group-hover:text-primary transition-colors cursor-pointer leading-tight">
+                        <h3 className="text-2xl font-serif font-bold text-slate-800 dark:text-white mb-4 group-hover:text-teal-600 dark:text-[#3fd5ba] transition-colors cursor-pointer leading-tight">
                           {newsItem.title}
                         </h3>
                       </Link>
-                      <p className="text-gray-600 text-sm line-clamp-2 mb-6 leading-relaxed">
+                      <p className="text-slate-600 dark:text-white/60 text-sm line-clamp-2 mb-6 leading-relaxed font-light">
                         {newsItem.excerpt || newsItem.content?.substring(0, 150) + '...'}
                       </p>
-                      <div className="mt-auto pt-4 border-t border-gray-50 flex justify-between items-center">
+                      <div className="mt-auto pt-5 border-t border-black/5 dark:border-white/5 flex justify-between items-center">
                         <Link href={`/berita/${newsItem.slug}`}>
-                          <Button variant="ghost" className="p-0 h-auto text-primary justify-start font-bold hover:no-underline group/btn hover:bg-transparent">
-                            Baca Selengkapnya <ArrowUpRight className="ml-1 w-4 h-4 group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1 transition-transform" />
+                          <Button variant="ghost" className="p-0 h-auto text-teal-600 dark:text-[#3fd5ba] justify-start font-bold uppercase tracking-widest text-xs hover:bg-transparent hover:text-slate-800 dark:text-white group/btn">
+                            Baca Selengkapnya <ArrowUpRight className="ml-2 w-4 h-4 group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1 transition-transform" />
                           </Button>
                         </Link>
-                        <span className="text-xs text-gray-400 flex items-center gap-1">
-                          <Clock size={12} /> {newsItem.read_time || '3 min read'}
+                        <span className="text-[10px] text-slate-600 dark:text-white/40 uppercase tracking-widest flex items-center gap-1.5 font-bold">
+                          <Clock size={12} className="text-slate-600 dark:text-white/30" /> {newsItem.read_time || '3 min'}
                         </span>
                       </div>
                     </div>
@@ -210,14 +210,14 @@ export default function News() {
               </motion.div>
             )}
             
-            {/* Pagination - only show if there are filtered news */}
+            {/* Pagination */}
             {filteredNews.length > 0 && (
               <div className="flex justify-center mt-16 gap-3">
-                <Button variant="outline" disabled className="rounded-full px-6">Previous</Button>
-                <Button variant="outline" className="bg-primary text-white border-primary rounded-full w-10 h-10 p-0 shadow-lg shadow-primary/30">1</Button>
-                <Button variant="outline" className="rounded-full w-10 h-10 p-0 hover:bg-gray-50">2</Button>
-                <Button variant="outline" className="rounded-full w-10 h-10 p-0 hover:bg-gray-50">3</Button>
-                <Button variant="outline" className="rounded-full px-6 hover:bg-gray-50">Next</Button>
+                <Button variant="outline" disabled className="rounded-full px-6 border-black/5 dark:border-white/10 text-slate-600 dark:text-white/50 bg-white/5">Prev</Button>
+                <Button variant="outline" className="bg-teal-500 dark:bg-[#3fd5ba] text-white dark:text-[#0a1a1c] border-teal-300 dark:border-[#3fd5ba] rounded-full w-10 h-10 p-0 shadow-sm dark:shadow-[0_0_15px_rgba(63,213,186,0.3)] font-bold">1</Button>
+                <Button variant="outline" className="rounded-full w-10 h-10 p-0 border-black/5 dark:border-white/10 bg-white/80 dark:bg-[#0b2023]/60 text-slate-800 dark:text-white hover:bg-teal-600/20 dark:bg-[#3fd5ba]/20 hover:text-slate-800 dark:text-white transition-colors">2</Button>
+                <Button variant="outline" className="rounded-full w-10 h-10 p-0 border-black/5 dark:border-white/10 bg-white/80 dark:bg-[#0b2023]/60 text-slate-800 dark:text-white hover:bg-teal-600/20 dark:bg-[#3fd5ba]/20 hover:text-slate-800 dark:text-white transition-colors">3</Button>
+                <Button variant="outline" className="rounded-full px-6 border-black/5 dark:border-white/10 bg-white/80 dark:bg-[#0b2023]/60 text-slate-800 dark:text-white hover:bg-teal-600/20 dark:bg-[#3fd5ba]/20 hover:text-slate-800 dark:text-white transition-colors">Next</Button>
               </div>
             )}
           </div>
@@ -226,17 +226,21 @@ export default function News() {
           <motion.div 
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.5 }}
-            className="w-full lg:w-1/3 space-y-8 sticky top-24 h-fit"
+            transition={{ delay: 0.4 }}
+            className="w-full lg:w-1/3 space-y-8 sticky top-28 h-fit"
           >
             {/* Search */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-              <h3 className="font-serif font-bold text-lg mb-4 text-gray-900">Pencarian</h3>
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <div className="bg-white/80 dark:bg-[#0b2023]/80 backdrop-blur-md p-6 lg:p-8 rounded-3xl border border-black/5 dark:border-white/10 shadow-lg relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-teal-600/5 dark:bg-[#3fd5ba]/5 rounded-full blur-[40px] group-hover:bg-teal-600/10 dark:bg-[#3fd5ba]/10 transition-colors" />
+              <div className="inline-flex items-center gap-2 text-teal-600 dark:text-[#3fd5ba] font-bold uppercase tracking-[0.2em] text-[10px] mb-4">
+                <Search size={14} />
+                <span>Pencarian</span>
+              </div>
+              <div className="relative z-10">
+                <Search className="absolute left-4 top-3.5 h-4 w-4 text-teal-600/50 dark:text-[#3fd5ba]/50" />
                 <Input 
-                  placeholder="Cari berita..." 
-                  className="pl-9 rounded-xl bg-gray-50 border-gray-200 focus:bg-white transition-all" 
+                  placeholder="Ketik kata kunci..." 
+                  className="pl-11 h-12 rounded-xl bg-white/[0.03] border-black/5 dark:border-white/10 text-slate-800 dark:text-white placeholder:text-slate-600 dark:text-white/30 focus:bg-white/[0.05] focus:border-teal-300 dark:border-[#3fd5ba]/50 transition-all font-light" 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -244,50 +248,51 @@ export default function News() {
             </div>
 
             {/* Categories */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-              <h3 className="font-serif font-bold text-lg mb-4 text-gray-900">Kategori</h3>
-              <div className="space-y-2">
+            <div className="bg-white/80 dark:bg-[#0b2023]/80 backdrop-blur-md p-6 lg:p-8 rounded-3xl border border-black/5 dark:border-white/10 shadow-lg relative overflow-hidden group">
+              <div className="inline-flex items-center gap-2 text-teal-600 dark:text-[#3fd5ba] font-bold uppercase tracking-[0.2em] text-[10px] mb-6">
+                <span>Kategori Topik</span>
+              </div>
+              <div className="space-y-2 relative z-10 w-full overflow-hidden">
                 {/* All Categories Option */}
                 <div 
                   onClick={() => setSelectedCategory("all")}
-                  className={`flex justify-between items-center cursor-pointer p-3 rounded-xl transition-colors ${
-                    selectedCategory === "all" ? "bg-primary/10 text-primary" : "hover:bg-primary/5 group"
+                  className={`flex justify-between items-center cursor-pointer p-3.5 rounded-xl transition-all border border-transparent ${
+                    selectedCategory === "all" 
+                      ? "bg-teal-600/10 dark:bg-[#3fd5ba]/10 text-teal-600 dark:text-[#3fd5ba] border-teal-300 dark:border-[#3fd5ba]/20 shadow-[0_0_15px_rgba(63,213,186,0.1)]" 
+                      : "hover:bg-white/[0.03] hover:border-black/5 dark:border-white/5 text-slate-600 dark:text-white/70 hover:text-slate-800 dark:text-white"
                   }`}
                 >
-                  <span className={`text-sm font-medium ${
-                    selectedCategory === "all" ? "text-primary" : "text-gray-600 group-hover:text-primary"
-                  } transition-colors`}>Semua Kategori</span>
+                  <span className={`text-sm font-medium transition-colors`}>Semua Kategori</span>
                   <Badge variant="secondary" className={`${
-                    selectedCategory === "all" ? "bg-primary text-white" : "bg-gray-100 text-gray-500 group-hover:bg-white group-hover:text-primary group-hover:shadow-sm"
+                    selectedCategory === "all" 
+                      ? "bg-teal-500 dark:bg-[#3fd5ba] text-white dark:text-[#0a1a1c] border-none" 
+                      : "bg-white/5 text-slate-600 dark:text-white/40 border border-black/5 dark:border-white/10"
                   }`}>
                     {news.length}
                   </Badge>
                 </div>
+
                 {categoriesLoading ? (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="w-6 h-6 animate-spin text-teal-600/50 dark:text-[#3fd5ba]/50" />
                   </div>
                 ) : categories.length > 0 ? (
                   categories.map((cat) => (
                     <div 
                       key={cat.id} 
                       onClick={() => setSelectedCategory(cat.slug || cat.id.toString())}
-                      className={`flex justify-between items-center cursor-pointer p-3 rounded-xl transition-colors ${
+                      className={`flex justify-between items-center cursor-pointer p-3.5 rounded-xl transition-all border border-transparent ${
                         selectedCategory === cat.slug || selectedCategory === cat.id.toString() 
-                          ? "bg-primary/10 text-primary" 
-                          : "hover:bg-primary/5 group"
+                          ? "bg-teal-600/10 dark:bg-[#3fd5ba]/10 text-teal-600 dark:text-[#3fd5ba] border-teal-300 dark:border-[#3fd5ba]/20 shadow-[0_0_15px_rgba(63,213,186,0.1)]" 
+                          : "hover:bg-white/[0.03] hover:border-black/5 dark:border-white/5 text-slate-600 dark:text-white/70 hover:text-slate-800 dark:text-white"
                       }`}
                     >
-                      <span className={`text-sm font-medium ${
-                        selectedCategory === cat.slug || selectedCategory === cat.id.toString()
-                          ? "text-primary" 
-                          : "text-gray-600 group-hover:text-primary"
-                      } transition-colors`}>{cat.name}</span>
+                      <span className={`text-sm font-medium transition-colors line-clamp-1 break-all pr-2`}>{cat.name}</span>
                       <Badge variant="secondary" className={`${
                         selectedCategory === cat.slug || selectedCategory === cat.id.toString()
-                          ? "bg-primary text-white" 
-                          : "bg-gray-100 text-gray-500 group-hover:bg-white group-hover:text-primary group-hover:shadow-sm"
-                      }`}>
+                          ? "bg-teal-500 dark:bg-[#3fd5ba] text-white dark:text-[#0a1a1c] border-none" 
+                          : "bg-white/5 text-slate-600 dark:text-white/40 border border-black/5 dark:border-white/10"
+                      } shrink-0`}>
                         {(cat as any).news_count || 0}
                       </Badge>
                     </div>
@@ -297,21 +302,17 @@ export default function News() {
                     <div 
                       key={cat} 
                       onClick={() => setSelectedCategory(cat.toLowerCase())}
-                      className={`flex justify-between items-center cursor-pointer p-3 rounded-xl transition-colors ${
+                      className={`flex justify-between items-center cursor-pointer p-3.5 rounded-xl transition-all border border-transparent ${
                         selectedCategory === cat.toLowerCase() 
-                          ? "bg-primary/10 text-primary" 
-                          : "hover:bg-primary/5 group"
+                          ? "bg-teal-600/10 dark:bg-[#3fd5ba]/10 text-teal-600 dark:text-[#3fd5ba] border-teal-300 dark:border-[#3fd5ba]/20 shadow-[0_0_15px_rgba(63,213,186,0.1)]" 
+                          : "hover:bg-white/[0.03] hover:border-black/5 dark:border-white/5 text-slate-600 dark:text-white/70 hover:text-slate-800 dark:text-white"
                       }`}
                     >
-                      <span className={`text-sm font-medium ${
-                        selectedCategory === cat.toLowerCase()
-                          ? "text-primary" 
-                          : "text-gray-600 group-hover:text-primary"
-                      } transition-colors`}>{cat}</span>
+                      <span className={`text-sm font-medium transition-colors`}>{cat}</span>
                       <Badge variant="secondary" className={`${
                         selectedCategory === cat.toLowerCase()
-                          ? "bg-primary text-white" 
-                          : "bg-gray-100 text-gray-500 group-hover:bg-white group-hover:text-primary group-hover:shadow-sm"
+                          ? "bg-teal-500 dark:bg-[#3fd5ba] text-white dark:text-[#0a1a1c] border-none" 
+                          : "bg-white/5 text-slate-600 dark:text-white/40 border border-black/5 dark:border-white/10"
                       }`}>
                         0
                       </Badge>
@@ -322,17 +323,21 @@ export default function News() {
             </div>
 
             {/* Popular Tags */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-              <h3 className="font-serif font-bold text-lg mb-4 text-gray-900">Tag Populer</h3>
-              <div className="flex flex-wrap gap-2">
+            <div className="bg-white/80 dark:bg-[#0b2023]/80 backdrop-blur-md p-6 lg:p-8 rounded-3xl border border-black/5 dark:border-white/10 shadow-lg relative overflow-hidden group">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-[40px] group-hover:bg-blue-500/10 transition-colors" />
+              <div className="inline-flex items-center gap-2 text-blue-400 font-bold uppercase tracking-[0.2em] text-[10px] mb-6">
+                <Tag size={14} />
+                <span>Tagar Populer</span>
+              </div>
+              <div className="flex flex-wrap gap-2 relative z-10 w-full overflow-hidden">
                 {["Dana Desa", "BLT", "Posyandu", "Jalan Tani", "UMKM", "Musyawarah", "Gotong Royong"].map((tag) => (
                   <Badge 
                     key={tag} 
                     variant={selectedTag === tag ? "default" : "outline"}
-                    className={`cursor-pointer px-3 py-1.5 rounded-lg transition-all duration-300 ${
+                    className={`cursor-pointer px-3.5 py-1.5 rounded-lg transition-all duration-300 font-medium ${
                       selectedTag === tag 
-                        ? "bg-primary text-white border-primary" 
-                        : "hover:bg-primary hover:text-white hover:border-primary"
+                        ? "bg-teal-600/20 dark:bg-[#3fd5ba]/20 text-teal-600 dark:text-[#3fd5ba] border-teal-300 dark:border-[#3fd5ba]/50 shadow-[0_0_15px_rgba(63,213,186,0.2)]" 
+                        : "bg-white/[0.02] text-slate-600 dark:text-white/60 border-black/5 dark:border-white/10 hover:bg-white/[0.05] hover:text-slate-800 dark:text-white hover:border-teal-300 dark:border-[#3fd5ba]/30"
                     }`}
                     onClick={() => setSelectedTag(selectedTag === tag ? "" : tag)}
                   >
@@ -345,6 +350,6 @@ export default function News() {
         </div>
       </div>
       <Footer />
-    </div>
+    </PageBackground>
   );
 }
