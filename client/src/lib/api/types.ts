@@ -305,10 +305,15 @@ export interface UMKM {
   produk: string;
   deskripsi?: string;
   foto?: string;
+  foto_url?: string;
+  thumb_url?: string;
   image?: string;
   no_hp?: string;
+  no_wa?: string;
   alamat?: string;
+  google_maps_url?: string;
   jorong?: string;
+  status?: string;
   nama_pemilik?: string;
   pemilik?: {
     id?: number;

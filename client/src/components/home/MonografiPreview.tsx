@@ -19,14 +19,14 @@ export default function MonografiPreview() {
     { dir: "Utara", val: "Nagari Silokek", icon: "↑" },
     { dir: "Timur", val: "Nagari Aie Angek", icon: "→" },
     { dir: "Selatan", val: "Nagari Sijunjung", icon: "↓" },
-    { dir: "Barat", val: "Nagari Padang Lawej", icon: "←" },
+    { dir: "Barat", val: "Nagari Padang Laweh", icon: "←" },
   ];
 
   return (
     <section className="px-4 md:px-6 relative">
       <div className="container mx-auto">
         <div className="flex flex-col lg:flex-row gap-8 lg:gap-16">
-          
+
           {/* Header & Boundaries - Left Side on Desktop */}
           <div className="w-full lg:w-5/12 flex flex-col justify-center">
             <motion.div
@@ -98,13 +98,13 @@ export default function MonografiPreview() {
                     className="bg-white/80 dark:bg-gradient-to-br dark:from-[#0b2023]/80 dark:to-[#0b2023]/40 backdrop-blur-md border border-black/5 dark:border-white/[0.05] rounded-[2rem] p-6 lg:p-8 hover:bg-white dark:hover:bg-white/[0.04] transition-all group overflow-hidden relative shadow-lg dark:shadow-xl h-full flex flex-col justify-between"
                   >
                     {/* Hover subtle radial glow */}
-                    <div 
+                    <div
                       className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
                       style={{ background: `radial-gradient(circle at bottom right, ${item.color}15, transparent 70%)` }}
                     />
 
                     <div className="mb-6 z-10">
-                      <div 
+                      <div
                         className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-500 shadow-inner"
                         style={{ backgroundColor: `${item.color}15`, border: `1px solid ${item.color}20` }}
                       >
@@ -112,7 +112,7 @@ export default function MonografiPreview() {
                       </div>
                       <p className="text-[11px] text-slate-500 dark:text-white/40 font-bold uppercase tracking-[0.2em]">{item.label}</p>
                     </div>
-                    
+
                     <div className="flex flex-col gap-1 z-10 relative">
                       <p className="text-4xl lg:text-5xl font-black text-slate-800 dark:text-white tracking-tight tabular-nums group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-teal-700 group-hover:to-emerald-600 dark:group-hover:from-white dark:group-hover:to-[#3fd5ba] transition-all duration-300">
                         {item.value}
@@ -124,10 +124,10 @@ export default function MonografiPreview() {
               ))}
             </div>
 
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }} 
-              whileInView={{ opacity: 1, y: 0 }} 
-              viewport={{ once: true }} 
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
               transition={{ delay: 0.4 }}
               className="mt-8 flex justify-end"
             >

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, Star, Loader2, Phone, MapPin, User, X, Sparkles } from "lucide-react";
+import { ArrowRight, Star, Loader2, Phone, MapPin, User, X, Sparkles, MessageCircle, Map } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -89,10 +89,12 @@ export default function UMKM() {
               >
                 {/* Image Showcase */}
                 <div className="aspect-[4/3] overflow-hidden relative m-3 md:m-4 rounded-2xl ring-1 ring-black/5 dark:ring-white/10 shadow-inner">
-                  {item.foto ? (
-                    <img src={item.foto} alt={item.nama_usaha} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                  {item.foto_url ? (
+                    <img src={item.foto_url} alt={item.nama_usaha} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy" />
                   ) : (
-                    <img src={`https://source.unsplash.com/800x600/?${encodeURIComponent(item.jenis_usaha || 'business')},shop`} alt={item.nama_usaha} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                    <div className="w-full h-full bg-gradient-to-br from-[#123136] to-[#0a1a1c] flex items-center justify-center">
+                      <Sparkles className="w-12 h-12 text-[#3fd5ba]/20" />
+                    </div>
                   )}
                   <div className="absolute inset-0 bg-black/5 dark:bg-[#0a1a1c]/20 group-hover:bg-transparent transition-colors duration-500" />
                   
@@ -124,8 +126,44 @@ export default function UMKM() {
                       </span>
                     </div>
                     
-                    <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/[0.04] flex items-center justify-center group-hover:bg-teal-500 dark:group-hover:bg-[#3fd5ba] group-hover:text-white dark:group-hover:text-[#0a1a1c] text-slate-400 dark:text-white/40 transition-colors duration-300">
-                      <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                    <div className="flex items-center gap-1.5">
+                      {(item.no_wa || item.no_hp) && (
+                        <a 
+                          href={`https://wa.me/${(item.no_wa || item.no_hp)?.replace(/[^0-9]/g, '')}?text=Halo, saya tertarik dengan produk ${item.nama_usaha}`}
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          title="WhatsApp"
+                        >
+                          <div className="w-8 h-8 rounded-full bg-[#128C7E]/10 dark:bg-[#128C7E]/20 flex items-center justify-center hover:bg-[#128C7E] hover:text-white text-[#128C7E] transition-colors duration-300 border border-[#128C7E]/20">
+                            <MessageCircle size={14} />
+                          </div>
+                        </a>
+                      )}
+                      {item.no_hp && (
+                        <a 
+                          href={`tel:${item.no_hp}`}
+                          onClick={(e) => e.stopPropagation()}
+                          title="Telepon"
+                        >
+                          <div className="w-8 h-8 rounded-full bg-blue-500/10 dark:bg-blue-500/20 flex items-center justify-center hover:bg-blue-500 hover:text-white text-blue-500 transition-colors duration-300 border border-blue-500/20">
+                            <Phone size={14} />
+                          </div>
+                        </a>
+                      )}
+                      {item.google_maps_url && (
+                        <a 
+                          href={item.google_maps_url}
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          title="Google Maps"
+                        >
+                          <div className="w-8 h-8 rounded-full bg-rose-500/10 dark:bg-rose-500/20 flex items-center justify-center hover:bg-rose-500 hover:text-white text-rose-500 transition-colors duration-300 border border-rose-500/20">
+                            <Map size={14} />
+                          </div>
+                        </a>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -159,10 +197,12 @@ export default function UMKM() {
               </div>
 
               <div className="relative h-64 md:h-80 w-full overflow-hidden">
-                {selectedUMKM.foto ? (
-                  <img src={selectedUMKM.foto} alt={selectedUMKM.nama_usaha} className="w-full h-full object-cover" />
+                {selectedUMKM.foto_url ? (
+                  <img src={selectedUMKM.foto_url} alt={selectedUMKM.nama_usaha} className="w-full h-full object-cover" />
                 ) : (
-                  <img src={`https://source.unsplash.com/800x600/?${encodeURIComponent(selectedUMKM.jenis_usaha || 'business')},shop`} alt={selectedUMKM.nama_usaha} className="w-full h-full object-cover" />
+                  <div className="w-full h-full bg-gradient-to-br from-[#123136] to-[#0a1a1c] flex items-center justify-center">
+                    <Sparkles className="w-16 h-16 text-[#3fd5ba]/20" />
+                  </div>
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-[#0b2023] via-white/80 dark:via-[#0b2023]/40 to-transparent" />
                 
