@@ -4,8 +4,13 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: 'Montserrat', sans-serif;
-  --font-serif: 'Playfair Display', serif;
+  /* The beranda design uses Inter for body copy and Plus Jakarta Sans for
+     headings. The token names stay `sans`/`serif` because 29 files already
+     spell them that way in class names; only the faces behind them changed, so
+     `font-serif` now means "display face", not "serif". */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-serif: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  --font-news: 'Newsreader', 'Plus Jakarta Sans', Georgia, serif;
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -22,6 +27,15 @@
   --color-primary-foreground: hsl(var(--primary-foreground));
   --color-secondary: hsl(var(--secondary));
   --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-secondary-ink: hsl(var(--secondary-ink));
+  --color-cat-1: hsl(var(--cat-1));
+  --color-cat-2: hsl(var(--cat-2));
+  --color-cat-3: hsl(var(--cat-3));
+  --color-cat-4: hsl(var(--cat-4));
+  --color-cat-5: hsl(var(--cat-5));
+  --color-cat-6: hsl(var(--cat-6));
+  --color-brand-wa: hsl(var(--brand-wa));
+  --color-brand-wa-foreground: hsl(var(--brand-wa-foreground));
   --color-muted: hsl(var(--muted));
   --color-muted-foreground: hsl(var(--muted-foreground));
   --color-accent: hsl(var(--accent));
@@ -36,6 +50,26 @@
   --color-chart-3: hsl(var(--chart-3));
   --color-chart-4: hsl(var(--chart-4));
   --color-chart-5: hsl(var(--chart-5));
+
+  /* Nagari identity palette from the beranda design. These are additions, not
+     replacements: --primary and --secondary still drive every other page, and
+     overwriting them to match one mockup would restyle the whole site by
+     accident. */
+  --color-nagari-navy: hsl(var(--nagari-navy));
+  --color-nagari-red: hsl(var(--nagari-red));
+  --color-nagari-red-ink: hsl(var(--nagari-red-ink));
+  --color-nagari-yellow: hsl(var(--nagari-yellow));
+
+  /* The page alternates a light band and a dark band. --band is the dark one,
+     --band-card the surface of cards sitting on it. Both flip with the theme,
+     so a navy band stays a band in dark mode instead of merging into the page. */
+  --color-band: hsl(var(--band));
+  --color-band-card: hsl(var(--band-card));
+
+  --shadow-heavy: 0 25px 50px -12px hsl(var(--nagari-navy) / 0.4);
+  --shadow-vibrant: 0 20px 40px -10px hsl(var(--nagari-red) / 0.35);
+  --shadow-card-hover: 0 30px 60px -15px hsl(var(--nagari-navy) / 0.18),
+                       0 20px 40px -10px hsl(var(--nagari-red) / 0.1);
 }
 
 /* LIGHT MODE - Corporate & Professional Theme */
@@ -47,6 +81,32 @@
   /* Professional Teal - Accent */
   --secondary: 178 68% 38%; /* #2b9a9e */
   --secondary-foreground: 0 0% 100%;
+
+  /* Teal for small text. --secondary at 38% lightness measures 3.10:1 against
+     the white card, under the 4.5:1 WCAG 1.4.3 floor for body-size text. Fills
+     keep --secondary; text uses this darker step at 4.72:1. */
+  --secondary-ink: 178 68% 30%;
+
+  /* WhatsApp green, as a token rather than the brand hex. Every service on this
+     site is handled over WhatsApp, so its green is part of the system, not a
+     one-off. #25D366 carries white text at 1.98:1, which is unusable; this
+     darker step carries it at 5.28:1 and also works as text on a white card at
+     the same ratio. */
+  --brand-wa: 152 60% 30%;
+  --brand-wa-foreground: 0 0% 100%;
+
+  /* Categorical accents: one hue per category, so a row of six cards reads as
+     six things rather than one thing repeated. Small doses only — icon tint,
+     unit label, a rule along a card edge — never a card background.
+     Ratios below are measured against the white card, so one token serves both
+     text (4.5:1) and graphics (3:1). cat-1 aliases the nagari teal so the
+     identity hue stays single-source. */
+  --cat-1: var(--secondary-ink); /* teal        4.72:1 */
+  --cat-2: 212 62% 38%;          /* blue        6.72:1 */
+  --cat-3: 158 52% 29%;          /* moss        5.94:1 */
+  --cat-4: 32 74% 34%;           /* ochre       5.50:1 */
+  --cat-5: 10 60% 40%;           /* terracotta  6.43:1 */
+  --cat-6: 228 48% 42%;          /* slate-blue  6.85:1 */
 
   /* Clean Professional Backgrounds */
   --background: 0 0% 98%; /* Nearly white */
@@ -79,6 +139,23 @@
   --chart-3: 210 65% 45%; /* Blue */
   --chart-4: 15 86% 48%;  /* Orange */
   --chart-5: 0 75% 50%;   /* Red */
+
+  /* Nagari identity palette: navy #091426, red #E11D48, yellow #FBBF24.
+     Measured, because the design uses all three at sizes the raw hex values
+     cannot always carry:
+       red on white          4.67:1  — body text is fine
+       red on navy           4.00:1  — large text and graphics only
+       yellow on white       1.69:1  — never text on a light surface
+       yellow on navy       11.06:1  — this is the small-text colour on navy
+       white on navy        18.70:1
+     --nagari-red-ink is the darker step for small red text on a white card. */
+  --nagari-navy: 217 62% 9%;
+  --nagari-red: 347 77% 50%;
+  --nagari-red-ink: 347 71% 42%; /* 6.39:1 on white */
+  --nagari-yellow: 43 96% 56%;
+
+  --band: 217 62% 9%;
+  --band-card: 0 0% 100%;
 }
 
 .dark {
@@ -96,6 +173,21 @@
 
   --secondary: 178 60% 50%;
   --secondary-foreground: 0 0% 100%;
+
+  /* The dark card is hsl(217 25% 12%), so every accent steps lighter. Ratios
+     measured against that card. */
+  --secondary-ink: 178 60% 58%;
+  --cat-1: var(--secondary-ink); /* teal        9.46:1 */
+  --cat-2: 212 72% 66%;          /* blue        6.53:1 */
+  --cat-3: 158 48% 55%;          /* moss        7.83:1 */
+  --cat-4: 36 80% 58%;           /* ochre       8.02:1 */
+  --cat-5: 10 70% 64%;           /* terracotta  5.78:1 */
+  --cat-6: 228 65% 72%;          /* slate-blue  7.10:1 */
+
+  /* 8.63:1 as text on the dark card; a fill of it carries the dark background
+     colour as its label at 9.29:1. */
+  --brand-wa: 152 50% 60%;
+  --brand-wa-foreground: 217 30% 9%;
 
   --muted: 217 20% 20%;
   --muted-foreground: 217 10% 70%;
@@ -115,6 +207,18 @@
   --chart-3: 210 65% 45%;
   --chart-4: 15 86% 48%;
   --chart-5: 0 75% 50%;
+
+  /* The identity hues step for the dark surface. Navy is already the dark
+     theme's own background, so the band goes darker still and the cards on it
+     go lighter — otherwise a "navy band" and the page around it are the same
+     colour and the band stops existing. */
+  --nagari-navy: 217 62% 9%;
+  --nagari-red: 347 77% 50%;
+  --nagari-red-ink: 347 80% 68%; /* 5.48:1 on --band-card */
+  --nagari-yellow: 43 96% 56%;   /* 11.47:1 on --band */
+
+  --band: 217 45% 6%;
+  --band-card: 217 25% 14%;
 }
 
 @layer base {
@@ -127,10 +231,101 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-serif;
   }
-  
-  /* Smooth Scrolling */
+
   html {
-    scroll-behavior: smooth;
+    scroll-behavior: auto;
+  }
+
+  /* No page may scroll sideways. `clip` instead of `hidden` so fixed children
+     (navbar, WhatsApp widget) keep working. */
+  html, body {
+    overflow-x: clip;
+  }
+
+  /* Every focusable element gets a visible ring (WCAG 2.2 SC 2.4.7 / 2.4.11).
+     The ring appears instantly — never animated. */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+  /* Mouse users keep the clean look; keyboard users get the ring above. */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* Anchor targets clear the fixed navbar instead of hiding under it. */
+  :target {
+    scroll-margin-top: 6rem;
+  }
+}
+
+/* Rich-text article body (news-detail). Theme-aware via tokens so it reads
+   correctly in BOTH themes — the old `.cyber-prose` hardcoded white text,
+   which vanished against the white light-mode card. */
+.article-body {
+  color: hsl(var(--foreground));
+  font-family: 'Newsreader', 'Plus Jakarta Sans', Georgia, serif;
+  font-size: 1.125rem;
+  line-height: 1.8;
+}
+.article-body > *:first-child { margin-top: 0; }
+.article-body h2, .article-body h3, .article-body h4, .article-body h5, .article-body h6 {
+  color: hsl(var(--foreground));
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 2.25rem 0 1rem;
+}
+.article-body h2 { font-size: 1.5rem; }
+.article-body h3 { font-size: 1.25rem; }
+.article-body h4, .article-body h5, .article-body h6 { font-size: 1.125rem; }
+.article-body p { margin: 0 0 1.25rem; }
+.article-body a {
+  color: hsl(var(--nagari-red-ink));
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.article-body strong, .article-body b { color: hsl(var(--foreground)); font-weight: 700; }
+.article-body em, .article-body i { font-style: italic; }
+.article-body img {
+  border-radius: 1rem;
+  margin: 1.75rem 0;
+  max-width: 100%;
+  height: auto;
+}
+.article-body ul, .article-body ol { margin: 0 0 1.25rem; padding-left: 1.5rem; }
+.article-body ul { list-style: disc; }
+.article-body ol { list-style: decimal; }
+.article-body li { margin: 0.25rem 0; }
+.article-body li::marker { color: hsl(var(--nagari-red-ink)); }
+.article-body blockquote {
+  border-left: 4px solid hsl(var(--nagari-red));
+  background: hsl(var(--muted));
+  padding: 1rem 1.25rem;
+  border-radius: 0 0.75rem 0.75rem 0;
+  font-style: italic;
+  margin: 1.5rem 0;
+}
+.article-body blockquote p { margin: 0; }
+.article-body pre, .article-body code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: hsl(var(--muted));
+  border-radius: 0.5rem;
+}
+.article-body pre { padding: 1rem; overflow-x: auto; margin: 0 0 1.25rem; }
+.article-body code { padding: 0.15rem 0.35rem; font-size: 0.9em; }
+.article-body pre code { padding: 0; background: transparent; }
+
+/* Motion is a preference, not a default. Spatial motion collapses to a short
+   crossfade; framer-motion is handled separately via MotionConfig in App.tsx. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 150ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
@@ -222,4 +417,134 @@
   .professional-hover {
     @apply transition-all duration-200 hover:shadow-md;
   }
+
+  /* Minangkabau diamond motif, tiled at 60px. Decoration only: it carries no
+     information, so it is never the thing distinguishing one section from
+     another, and it stays under 5% opacity so text over it keeps the contrast
+     the text colour was measured for. */
+  .pattern-minangkabau {
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l30 30-30 30L0 30z' fill='%23E11D48' fill-opacity='0.03'/%3E%3C/svg%3E");
+  }
+  /* On a dark page the red tint disappears, so the motif switches to the yellow. */
+  .dark .pattern-minangkabau {
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l30 30-30 30L0 30z' fill='%23FBBF24' fill-opacity='0.05'/%3E%3C/svg%3E");
+  }
+
+  /* For the navy bands, which are dark in both themes and so need the yellow
+     motif in both. Kept very faint so it reads as texture, not a chessboard. */
+  .pattern-minangkabau-navy {
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l30 30-30 30L0 30z' fill='%23FBBF24' fill-opacity='0.03'/%3E%3C/svg%3E");
+  }
+
+  /* Frosted panel for controls sitting on the hero photo. The white film is far
+     too thin to be a contrast source on its own — anything readable placed on
+     it still needs the hero's own scrim behind it. Treat this as a border and a
+     blur, not as a background colour. */
+  .glass-card {
+    background-color: rgb(255 255 255 / 0.15);
+    border: 1px solid rgb(255 255 255 / 0.3);
+    backdrop-filter: blur(16px);
+  }
+  /* backdrop-filter forces a new compositing layer, which some GPUs render as a
+     visible seam over a gradient. Dropping it costs only the blur. */
+  @supports not (backdrop-filter: blur(1px)) {
+    .glass-card {
+      background-color: rgb(255 255 255 / 0.22);
+    }
+  }
+}
+
+/* Leaflet region polygons.
+   Leaflet paints paths through SVG presentation attributes, which any stylesheet
+   rule outranks — so the region colour can live on the same tokens as the rest
+   of the page instead of a hex literal passed through JS. Used by
+   components/home/PetaPreview.tsx and kept outside @layer so it also outranks
+   leaflet's own stylesheet. */
+.leaflet-region-nagari {
+  stroke: hsl(var(--secondary));
+  stroke-width: 3;
+  fill: hsl(var(--secondary));
+  fill-opacity: 0.15;
+}
+
+/* =================== ACCESSIBILITY / DISABILITAS MODES =================== */
+
+/* High Contrast mode via CSS custom properties (never uses root filter so
+   position: fixed elements like Navbar and floating widgets stay intact). */
+html.a11y-high-contrast {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 0%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 0%;
+  --muted: 0 0% 94%;
+  --muted-foreground: 0 0% 15%;
+  --border: 0 0% 12%;
+  --input: 0 0% 12%;
+  --nagari-red-ink: 347 90% 32%;
+}
+
+html.dark.a11y-high-contrast {
+  --background: 0 0% 0%;
+  --foreground: 0 0% 100%;
+  --card: 0 0% 6%;
+  --card-foreground: 0 0% 100%;
+  --muted: 0 0% 14%;
+  --muted-foreground: 0 0% 90%;
+  --border: 0 0% 85%;
+  --input: 0 0% 85%;
+  --nagari-red-ink: 43 100% 60%;
+}
+
+/* Dyslexia-friendly spacing & legible sans-serif typography */
+html.a11y-dyslexia body,
+html.a11y-dyslexia p,
+html.a11y-dyslexia li,
+html.a11y-dyslexia a,
+html.a11y-dyslexia h1,
+html.a11y-dyslexia h2,
+html.a11y-dyslexia h3,
+html.a11y-dyslexia h4,
+html.a11y-dyslexia td,
+html.a11y-dyslexia th {
+  font-family: 'Inter', 'Arial', 'Helvetica', sans-serif !important;
+  letter-spacing: 0.04em !important;
+  word-spacing: 0.14em !important;
+  line-height: 1.8 !important;
+}
+
+/* Highlight links across page content */
+html.a11y-highlight-links a:not([data-a11y-ignore]) {
+  text-decoration: underline !important;
+  text-decoration-thickness: 2px !important;
+  text-underline-offset: 4px !important;
+  outline: 2px solid hsl(var(--nagari-yellow)) !important;
+  outline-offset: 2px !important;
+  border-radius: 4px;
+}
+
+/* High-visibility large cursor */
+html.a11y-large-cursor,
+html.a11y-large-cursor * {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 32 32'%3E%3Cpath d='M4 2 L4 26 L10.5 20 L15 29 L19 27 L14.5 18 L23 18 Z' fill='%23000000' stroke='%23ffffff' stroke-width='2.2' stroke-linejoin='round'/%3E%3C/svg%3E") 4 2, auto !important;
+}
+
+/* Pause animations & transitions */
+html.a11y-pause-motion *,
+html.a11y-pause-motion *::before,
+html.a11y-pause-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Subtle cue when click-to-read speech mode is active */
+html.a11y-tts-active main p:hover,
+html.a11y-tts-active main h1:hover,
+html.a11y-tts-active main h2:hover,
+html.a11y-tts-active main h3:hover,
+html.a11y-tts-active main li:hover {
+  outline: 2px dashed hsl(var(--nagari-red));
+  outline-offset: 3px;
+  border-radius: 6px;
 }

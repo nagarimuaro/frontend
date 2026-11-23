@@ -9,12 +9,13 @@ export function ThemeToggle() {
     <Button
       variant="ghost"
       size="icon"
-      className="rounded-full w-9 h-9 border border-black/10 dark:border-white/10 bg-white/5 hover:bg-black/5 dark:bg-white/5 dark:hover:bg-white/10 text-slate-800 dark:text-white transition-all shadow-sm dark:shadow-none"
+      aria-label={theme === "light" ? "Aktifkan mode gelap" : "Aktifkan mode terang"}
+      className="rounded-lg w-11 h-11 border border-border bg-background hover:bg-muted text-foreground transition-colors"
       onClick={() => setTheme(theme === "light" ? "dark" : "light")}
     >
-      <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 text-amber-500" />
-      <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 text-[#3fd5ba]" />
-      <span className="sr-only">Toggle theme</span>
+      <Sun aria-hidden="true" className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-transform dark:-rotate-90 dark:scale-0 text-amber-600" />
+      <Moon aria-hidden="true" className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-transform dark:rotate-0 dark:scale-100 text-nagari-yellow" />
+      <span className="sr-only">Ganti tema tampilan</span>
     </Button>
   );
 }

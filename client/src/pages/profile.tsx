@@ -1,218 +1,442 @@
-import { motion } from "framer-motion";
+import { useState, useMemo } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import {
-  History, Target, Users
+  History,
+  Target,
+  Users,
+  MapPin,
+  Loader2,
+  Phone,
+  Mail,
+  Clock,
+  Award,
 } from "lucide-react";
-import {
-  Card, CardContent
-} from "@/components/ui/card";
-import { useNagariProfile, useStaff } from "@/lib/api";
+import { Card, CardContent } from "@/components/ui/card";
+import { useNagariProfile, useStaff, useSiteSettings } from "@/lib/api";
+import { getTenantName } from "@/lib/tenant-name";
+import { accentByIndex } from "@/lib/accents";
 import PageHeader from "@/components/layout/PageHeader";
 import PageBackground from "@/components/layout/PageBackground";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import profileImage from "@assets/generated_images/portrait_of_nagari_head.png";
 
+const EASE_UI: [number, number, number, number] = [0.2, 0.8, 0.2, 1];
+
 export default function Profil() {
+  const prefersReducedMotion = Boolean(useReducedMotion());
   const { data: profileData, isLoading: profileLoading } = useNagariProfile();
   const { data: staffData, isLoading: staffLoading } = useStaff();
+  const { data: settingsData } = useSiteSettings();
+  const [selectedDept, setSelectedDept] = useState<string>("all");
 
   const profile = profileData?.data;
   const staff = staffData?.data || [];
+  const tenantName = getTenantName(settingsData?.data, profile?.nama_nagari);
+
+  const leaders = useMemo(
+    () => staff.filter((person) => Boolean(person.is_leadership)),
+    [staff]
+  );
+
+  const members = useMemo(
+    () => staff.filter((person) => !person.is_leadership),
+    [staff]
+  );
+
+  const departments = useMemo(() => {
+    const set = new Set<string>();
+    for (const m of members) {
+      if (m.department && m.department.trim()) {
+        set.add(m.department.trim());
+      }
+    }
+    return Array.from(set);
+  }, [members]);
+
+  const filteredMembers = useMemo(() => {
+    if (selectedDept === "all") return members;
+    return members.filter((m) => (m.department || "").trim() === selectedDept);
+  }, [members, selectedDept]);
 
   if (profileLoading || staffLoading) {
     return (
       <PageBackground>
         <Navbar />
-        <div className="flex items-center justify-center py-32 space-x-3">
-          <div className="w-8 h-8 rounded-full border-b-2 border-teal-300 dark:border-[#3fd5ba] animate-spin" />
-          <span className="text-teal-600 dark:text-[#3fd5ba] uppercase tracking-widest text-xs font-bold">Memuat profil...</span>
+        <div className="flex items-center justify-center py-32 gap-3 min-h-[60vh]">
+          <Loader2 aria-hidden="true" className="w-7 h-7 text-nagari-red animate-spin" />
+          <span className="text-sm font-medium text-muted-foreground">
+            Memuat profil nagari...
+          </span>
         </div>
         <Footer />
       </PageBackground>
     );
   }
 
+  const infoRows = [
+    { label: "Nama Nagari", value: tenantName },
+    { label: "Kecamatan", value: profile?.kecamatan },
+    { label: "Kabupaten", value: profile?.kabupaten },
+    { label: "Provinsi", value: profile?.provinsi || "Sumatera Barat" },
+    { label: "Kode Pos", value: profile?.kode_pos },
+    {
+      label: "Luas Wilayah",
+      value: profile?.luas_wilayah ? `${profile.luas_wilayah} km²` : null,
+    },
+    {
+      label: "Ketinggian",
+      value: profile?.ketinggian != null ? `${profile.ketinggian} mdpl` : null,
+    },
+  ].filter((row) => Boolean(row.value));
+
+  const misiList =
+    profile?.misi && profile.misi.length > 0
+      ? profile.misi
+      : [
+          "Meningkatkan kualitas pelayanan publik",
+          "Mengembangkan potensi ekonomi masyarakat",
+          "Melestarikan adat dan budaya",
+          "Meningkatkan infrastruktur dan fasilitas umum",
+        ];
+
   return (
     <PageBackground>
       <Navbar />
       <PageHeader
         title="Profil Nagari"
-        description="Mengenal lebih dekat sejarah, visi misi, dan struktur pemerintahan Nagari."
+        description="Mengenal lebih dekat sejarah, identitas wilayah, visi misi, dan susunan perangkat pemerintahan nagari."
         image={profileImage}
       />
 
-      <div className="container mx-auto px-4 py-16 md:py-24 space-y-32">
-        {/* Sejarah - Animated Scroll Reveal */}
-        <section className="grid md:grid-cols-2 gap-12 lg:gap-20 items-center">
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.8 }}
-            className="space-y-8"
-          >
-            <div className="inline-flex items-center gap-2 text-teal-600 dark:text-[#3fd5ba] font-bold uppercase tracking-[0.2em] text-[10px] bg-teal-600/10 dark:bg-[#3fd5ba]/10 px-4 py-1.5 rounded-full border border-teal-300 dark:border-[#3fd5ba]/20 shadow-[0_0_15px_rgba(63,213,186,0.15)]">
-              <History size={14} />
-              <span>Sejarah Nagari</span>
-            </div>
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold text-slate-800 dark:text-white leading-[1.15] tracking-tight">
-              Akar Sejarah & <br /><span className="text-teal-600 dark:text-[#3fd5ba] drop-shadow-[0_0_20px_rgba(63,213,186,0.4)]">Kearifan Lokal</span>
+      <div className="container mx-auto px-4 md:px-6 py-12 md:py-16 space-y-16 md:space-y-20">
+        {/* Sejarah & Identitas */}
+        <section className="grid lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+          <div className="lg:col-span-7 space-y-6">
+            <p className="inline-flex items-center gap-2 text-nagari-red-ink font-semibold text-[13px]">
+              <History aria-hidden="true" size={15} />
+              Sejarah &amp; Jati Diri
+            </p>
+            <h2 className="text-3xl md:text-4xl font-serif font-bold text-foreground leading-tight tracking-tight">
+              Akar Sejarah &amp; Kearifan Lokal
             </h2>
-            <div className="space-y-6 text-slate-600 dark:text-white/70 text-base md:text-lg leading-relaxed font-light">
-              <p>
-                {profile?.sejarah || `Nagari ${profile?.nama_nagari || '...'} terbentuk sebagai hasil pemekaran wilayah. Nagari ini terletak di ${profile?.kecamatan || 'Kecamatan'}, ${profile?.kabupaten || 'Kabupaten'}, ${profile?.provinsi || 'Sumatera Barat'}.`}
+
+            <div className="space-y-5 text-muted-foreground text-base leading-relaxed">
+              <p className="whitespace-pre-line">
+                {profile?.sejarah ||
+                  `${tenantName} terletak di Kecamatan ${profile?.kecamatan || "—"}, Kabupaten ${profile?.kabupaten || "—"}, ${profile?.provinsi || "Sumatera Barat"}. Pemerintahan nagari hadir melayani masyarakat secara terbuka dan berlandaskan kearifan lokal Minangkabau.`}
               </p>
-              <div className="p-6 rounded-2xl bg-white/[0.03] border border-black/5 dark:border-white/10 relative overflow-hidden group">
-                <div className="absolute top-0 left-0 w-1 h-full bg-teal-500 dark:bg-[#3fd5ba] shadow-[0_0_10px_rgba(63,213,186,0.8)]" />
-                <p className="font-serif italic text-slate-600 dark:text-white/90 text-xl leading-relaxed">
-                  "Adat Basandi Syarak, Syarak Basandi Kitabullah"
+
+              <blockquote className="p-5 md:p-6 rounded-2xl bg-muted/60 border border-border border-l-4 border-l-nagari-red">
+                <p className="font-serif italic text-foreground text-lg md:text-xl leading-relaxed">
+                  “Adat Basandi Syarak, Syarak Basandi Kitabullah”
                 </p>
-              </div>
+              </blockquote>
+
               {profile?.potensi_unggulan && profile.potensi_unggulan.length > 0 && (
-                <div className="flex flex-wrap gap-2 pt-4">
-                  {profile.potensi_unggulan.map((potensi: string, i: number) => (
-                    <span key={i} className="px-4 py-2 rounded-full bg-teal-50 dark:bg-[#144749]/50 border border-teal-300 dark:border-[#3fd5ba]/20 text-teal-600 dark:text-[#3fd5ba] text-xs uppercase tracking-widest font-bold">
-                      {potensi}
-                    </span>
-                  ))}
+                <div className="pt-2 space-y-3">
+                  <p className="text-[13px] font-semibold text-foreground">
+                    Potensi Unggulan Nagari
+                  </p>
+                  <div className="flex flex-wrap gap-2.5">
+                    {profile.potensi_unggulan.map((potensi, i) => {
+                      const accent = accentByIndex(i);
+                      return (
+                        <span
+                          key={potensi}
+                          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-card border border-border text-foreground text-sm font-medium"
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={`w-2 h-2 rounded-full ${accent.edge}`}
+                          />
+                          {potensi}
+                        </span>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, rotate: 2 }}
-            whileInView={{ opacity: 1, scale: 1, rotate: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="relative"
-          >
-            <div className="absolute inset-0 bg-teal-600/20 dark:bg-[#3fd5ba]/20 rounded-3xl blur-[40px] -z-10" />
-            <div className="aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl border border-black/5 dark:border-white/10 bg-white/80 dark:bg-[#0b2023]/80">
-              <img
-                src="https://sumbar.jadesta.com/imgpost/106151.jpg"
-                alt="Sejarah Nagari"
-                className="w-full h-full object-cover scale-110 hover:scale-100 opacity-80 mix-blend-luminosity hover:mix-blend-normal transition-all duration-[2s]"
-              />
-            </div>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              className="absolute -bottom-8 -left-8 w-48 h-48 bg-white/80 dark:bg-[#0b2023]/90 backdrop-blur-xl p-6 rounded-3xl shadow-[0_20px_40px_rgba(0,0,0,0.5)] flex flex-col items-center justify-center text-center border border-black/5 dark:border-white/10 hidden md:flex group"
-            >
-              <div className="absolute inset-0 bg-teal-600/5 dark:bg-[#3fd5ba]/5 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="w-12 h-1 bg-teal-500 dark:bg-[#3fd5ba] mb-4 rounded-full shadow-[0_0_10px_rgba(63,213,186,0.5)]" />
-              <span className="text-6xl font-bold text-slate-800 dark:text-white font-serif tracking-tighter drop-shadow-md group-hover:text-teal-600 dark:text-[#3fd5ba] transition-colors">24</span>
-              <span className="text-teal-600/70 dark:text-[#3fd5ba]/70 font-bold mt-2 uppercase tracking-[0.2em] text-[10px]">Tahun<br />Berdiri</span>
-            </motion.div>
-          </motion.div>
-        </section>
-
-        {/* Visi Misi - Staggered Grid */}
-        <section className="relative rounded-[3rem] overflow-hidden bg-[#0A1A1C] border border-black/5 dark:border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.5)] text-slate-800 dark:text-white p-8 md:p-20">
-          <div className="absolute right-0 top-0 w-1/2 h-full bg-gradient-to-l from-[#144749]/30 to-transparent pointer-events-none" />
-          <div className="absolute -top-40 -right-40 w-96 h-96 bg-[#3fd5ba]/[0.1] rounded-full blur-[100px]" />
-          
-          <div className="relative z-10 text-center max-w-4xl mx-auto mb-20">
-            <div className="inline-flex items-center gap-2 text-teal-600 dark:text-[#3fd5ba] font-bold uppercase tracking-[0.2em] text-[10px] mb-8 border border-teal-300 dark:border-[#3fd5ba]/20 bg-teal-600/5 dark:bg-[#3fd5ba]/5 px-4 py-1.5 rounded-full shadow-[0_0_15px_rgba(63,213,186,0.1)]">
-              <Target size={14} />
-              <span>Visi & Misi</span>
-            </div>
-            <h2 className="text-3xl md:text-5xl font-serif font-bold mb-8 leading-tight tracking-tight drop-shadow-lg">
-              "{profile?.visi || 'Terwujudnya Nagari yang Maju, Mandiri, dan Berbudaya Berlandaskan Iman dan Taqwa'}"
-            </h2>
-            <div className="w-24 h-px bg-gradient-to-r from-transparent via-[#3fd5ba] to-transparent mx-auto opacity-50" />
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6 relative z-10">
-            {(profile?.misi || [
-              "Meningkatkan kualitas pelayanan publik",
-              "Mengembangkan potensi ekonomi masyarakat",
-              "Melestarikan adat dan budaya",
-              "Meningkatkan infrastruktur dan fasilitas umum"
-            ]).map((item: any, index: number) => (
-              <motion.div
+          <div className="lg:col-span-5 space-y-5">
+            <Card className="bg-card border border-border rounded-2xl overflow-hidden">
+              <div aria-hidden="true" className="h-1 w-full bg-nagari-red" />
+              <CardContent className="p-6 space-y-4">
+                <h3 className="font-serif font-bold text-lg text-foreground flex items-center gap-2.5 pb-3 border-b border-border">
+                  <MapPin aria-hidden="true" size={18} className="text-nagari-red-ink" />
+                  Identitas Administratif
+                </h3>
+                <dl className="divide-y divide-border">
+                  {infoRows.map((row) => (
+                    <div
+                      key={row.label}
+                      className="py-3 flex justify-between gap-4 text-sm"
+                    >
+                      <dt className="text-muted-foreground">{row.label}</dt>
+                      <dd className="font-semibold text-foreground text-right tabular-nums">
+                        {row.value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </CardContent>
+            </Card>
+
+            {(profile?.alamat_kantor || profile?.telepon || profile?.email) && (
+              <Card className="bg-card border border-border rounded-2xl">
+                <CardContent className="p-6 space-y-3.5 text-sm">
+                  <h3 className="font-serif font-bold text-base text-foreground pb-2.5 border-b border-border flex items-center gap-2">
+                    <Clock aria-hidden="true" size={16} className="text-nagari-red-ink" />
+                    Kantor Wali Nagari
+                  </h3>
+                  {profile?.alamat_kantor && (
+                    <p className="text-muted-foreground leading-relaxed">
+                      {profile.alamat_kantor}
+                    </p>
+                  )}
+                  <div className="space-y-2 pt-1">
+                    {profile?.telepon && (
+                      <a
+                        href={`tel:${profile.telepon}`}
+                        className="flex items-center gap-2.5 text-foreground hover:text-nagari-red-ink transition-colors"
+                      >
+                        <Phone aria-hidden="true" size={15} className="text-muted-foreground shrink-0" />
+                        <span className="font-medium tabular-nums">{profile.telepon}</span>
+                      </a>
+                    )}
+                    {profile?.email && (
+                      <a
+                        href={`mailto:${profile.email}`}
+                        className="flex items-center gap-2.5 text-foreground hover:text-nagari-red-ink transition-colors break-all"
+                      >
+                        <Mail aria-hidden="true" size={15} className="text-muted-foreground shrink-0" />
+                        <span className="font-medium">{profile.email}</span>
+                      </a>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </section>
+
+        {/* Visi & Misi */}
+        <section className="rounded-2xl bg-nagari-navy border border-white/10 text-white p-6 md:p-10 lg:p-14">
+          <div className="max-w-3xl mb-10">
+            <p className="inline-flex items-center gap-2 text-nagari-yellow font-semibold text-[13px] mb-3">
+              <Target aria-hidden="true" size={15} />
+              Visi &amp; Misi Pembangunan
+            </p>
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-serif font-bold leading-snug tracking-tight">
+              “
+              {profile?.visi ||
+                "Terwujudnya Nagari yang Maju, Mandiri, dan Berbudaya Berlandaskan Iman dan Taqwa"}
+              ”
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4 md:gap-5">
+            {misiList.map((item, index) => (
+              <div
                 key={index}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                whileHover={{ y: -5 }}
+                className="border border-white/15 bg-white/5 rounded-xl p-5 md:p-6 flex items-start gap-4"
               >
-                <Card className="border border-black/5 dark:border-white/5 shadow-lg bg-white/[0.02] backdrop-blur-md text-slate-800 dark:text-white hover:bg-white/[0.05] hover:border-teal-300 dark:border-[#3fd5ba]/30 transition-all duration-300 h-full group relative overflow-hidden">
-                  {/* Subtle hover gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-[#3fd5ba]/[0.05] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  
-                  <CardContent className="p-8 relative z-10">
-                    <h3 className="text-xl font-bold mb-4 flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-white dark:bg-[#0b2023] border border-teal-300 dark:border-[#3fd5ba]/20 text-teal-600 dark:text-[#3fd5ba] flex items-center justify-center font-bold shadow-[0_0_15px_rgba(63,213,186,0.1)] group-hover:bg-teal-500 dark:bg-[#3fd5ba] group-hover:text-[#0b2023] transition-colors">
-                        M{index + 1}
-                      </div>
-                    </h3>
-                    <p className="text-slate-600 dark:text-white/70 leading-relaxed font-light group-hover:text-slate-800 dark:text-white transition-colors">{item}</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
+                <span className="w-10 h-10 rounded-lg bg-white/10 border border-white/15 text-nagari-yellow flex items-center justify-center font-serif font-bold text-sm shrink-0 tabular-nums">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <p className="text-white/90 leading-relaxed text-base">{item}</p>
+              </div>
             ))}
           </div>
         </section>
 
-        {/* Struktur Pemerintahan - Carousel/Grid */}
-        <section>
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 text-teal-600 dark:text-[#3fd5ba] font-bold uppercase tracking-[0.2em] text-[10px] mb-4">
-              <Users size={14} />
-              <span>Perangkat Nagari</span>
+        {/* Struktur Pemerintahan */}
+        <section className="space-y-8">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-5 border-b border-border">
+            <div>
+              <p className="inline-flex items-center gap-2 text-nagari-red-ink font-semibold text-[13px] mb-2">
+                <Users aria-hidden="true" size={15} />
+                Perangkat Nagari
+              </p>
+              <h2 className="text-3xl md:text-4xl font-serif font-bold text-foreground tracking-tight">
+                Struktur Pemerintahan
+              </h2>
             </div>
-            <h2 className="text-4xl md:text-5xl font-serif font-bold text-slate-800 dark:text-white tracking-tight drop-shadow-md">
-              Struktur Pemerintahan
-            </h2>
+            {staff.length > 0 && (
+              <span className="text-[13px] font-semibold px-3.5 py-1.5 rounded-lg bg-muted text-foreground border border-border self-start md:self-auto tabular-nums">
+                {staff.length} Perangkat Aktif
+              </span>
+            )}
           </div>
 
           {staff.length === 0 ? (
-            <div className="text-center py-16 bg-white/80 dark:bg-[#0b2023]/50 border border-black/5 dark:border-white/5 rounded-[3rem] backdrop-blur-md">
-              <Users className="w-12 h-12 mx-auto text-slate-600 dark:text-white/20 mb-4" />
-              <p className="text-slate-600 dark:text-white/40 uppercase tracking-widest text-xs font-bold">Belum ada data perangkat nagari</p>
+            <div className="text-center py-16 bg-card border border-border rounded-2xl">
+              <Users
+                aria-hidden="true"
+                className="w-12 h-12 mx-auto text-muted-foreground mb-3"
+              />
+              <p className="text-muted-foreground text-base">
+                Belum ada data perangkat nagari yang dipublikasikan.
+              </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-              {staff.map((person, index) => (
-                <motion.div
-                  key={person.id}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  viewport={{ once: true }}
-                  className="group"
-                >
-                  <div className="aspect-[3/4] rounded-3xl overflow-hidden relative shadow-[0_10px_30px_rgba(0,0,0,0.5)] border border-black/5 dark:border-white/10 bg-white dark:bg-[#0b2023]">
-                    {person.photo ? (
-                      <img
-                        src={person.photo}
-                        alt={person.name}
-                        className="w-full h-full object-cover transition-all duration-700 scale-100 group-hover:scale-110 opacity-70 group-hover:opacity-100 mix-blend-luminosity group-hover:mix-blend-normal"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-teal-50 dark:bg-[#144749]/30 flex items-center justify-center">
-                        <Users className="w-16 h-16 text-teal-600/20 dark:text-[#3fd5ba]/20" />
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0a1a1c] via-[#0a1a1c]/60 to-transparent opacity-90 group-hover:opacity-100 transition-opacity" />
+            <div className="space-y-10">
+              {/* Featured Pimpinan Nagari */}
+              {leaders.length > 0 && (
+                <div className="space-y-4">
+                  <p className="inline-flex items-center gap-2 text-[13px] font-semibold text-muted-foreground">
+                    <Award aria-hidden="true" size={15} className="text-nagari-red-ink" />
+                    Pimpinan Pemerintahan Nagari
+                  </p>
+                  <div
+                    className={`grid gap-6 ${
+                      leaders.length === 1 ? "grid-cols-1 max-w-3xl" : "grid-cols-1 lg:grid-cols-2"
+                    }`}
+                  >
+                    {leaders.map((leader) => (
+                      <Card
+                        key={leader.id}
+                        className="bg-card border border-border rounded-2xl overflow-hidden group"
+                      >
+                        <div aria-hidden="true" className="h-1 w-full bg-nagari-red" />
+                        <div className="grid sm:grid-cols-12">
+                          <div className="sm:col-span-5 aspect-[4/5] sm:aspect-auto sm:min-h-[260px] relative overflow-hidden bg-muted">
+                            {leader.photo ? (
+                              <img
+                                src={leader.photo}
+                                alt={`Foto ${leader.name}`}
+                                className="w-full h-full object-cover object-top transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                                loading="lazy"
+                                decoding="async"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Users
+                                  aria-hidden="true"
+                                  className="w-14 h-14 text-muted-foreground/35"
+                                />
+                              </div>
+                            )}
+                          </div>
+                          <div className="sm:col-span-7 p-6 flex flex-col justify-between gap-4">
+                            <div>
+                              <span className="inline-block text-[13px] font-semibold px-2.5 py-0.5 rounded-md bg-nagari-red/10 text-nagari-red-ink mb-2.5">
+                                {leader.position || leader.department || "Pimpinan Nagari"}
+                              </span>
+                              <h3 className="font-serif font-bold text-2xl text-foreground leading-snug">
+                                {leader.name}
+                              </h3>
+                              {leader.description && (
+                                <p className="text-muted-foreground text-sm leading-relaxed mt-3">
+                                  {leader.description}
+                                </p>
+                              )}
+                            </div>
 
-                    <div className="absolute bottom-0 left-0 w-full p-6 text-slate-800 dark:text-white z-20 translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
-                      <div className="w-8 h-1 bg-teal-500 dark:bg-[#3fd5ba] mb-4 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-500 -translate-x-4 group-hover:translate-x-0 shadow-[0_0_10px_rgba(63,213,186,0.5)]" />
-                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-teal-600 dark:text-[#3fd5ba] mb-1">
-                        {person.department || 'Perangkat'}
-                      </p>
-                      <h3 className="font-serif font-bold text-xl leading-tight mb-2">
-                        {person.name}
-                      </h3>
-                      <p className="text-xs text-slate-600 dark:text-white/50 font-light uppercase tracking-wider">
-                        {person.position}
-                      </p>
-                    </div>
+                            {leader.department && leader.department !== leader.position && (
+                              <p className="text-[13px] text-muted-foreground pt-3 border-t border-border">
+                                Bidang: <strong className="text-foreground">{leader.department}</strong>
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
                   </div>
-                </motion.div>
-              ))}
+                </div>
+              )}
+
+              {/* Perangkat & Staf Grid */}
+              {members.length > 0 && (
+                <div className="space-y-6">
+                  {departments.length > 1 && (
+                    <div
+                      role="tablist"
+                      aria-label="Saring perangkat berdasarkan bidang"
+                      className="inline-flex flex-wrap gap-1.5 p-1 rounded-xl bg-card border border-border"
+                    >
+                      {["all", ...departments].map((dept) => {
+                        const active = selectedDept === dept;
+                        return (
+                          <button
+                            key={dept}
+                            type="button"
+                            role="tab"
+                            aria-selected={active}
+                            onClick={() => setSelectedDept(dept)}
+                            className={`relative px-3.5 h-10 rounded-lg text-[13px] font-medium transition-colors ${
+                              active
+                                ? "text-white"
+                                : "text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            {active && (
+                              <motion.span
+                                layoutId="profile-dept-pill"
+                                transition={
+                                  prefersReducedMotion
+                                    ? { duration: 0 }
+                                    : { duration: 0.24, ease: EASE_UI }
+                                }
+                                className="absolute inset-0 rounded-lg bg-nagari-red"
+                                aria-hidden="true"
+                              />
+                            )}
+                            <span className="relative z-10">
+                              {dept === "all" ? "Semua Bidang" : dept}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                    {filteredMembers.map((person) => (
+                      <div
+                        key={person.id}
+                        className="group rounded-2xl overflow-hidden border border-border bg-card flex flex-col"
+                      >
+                        <div className="aspect-[3/4] relative overflow-hidden bg-muted">
+                          {person.photo ? (
+                            <img
+                              src={person.photo}
+                              alt={`Foto ${person.name}`}
+                              className="w-full h-full object-cover object-top transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                              loading="lazy"
+                              decoding="async"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Users
+                                aria-hidden="true"
+                                className="w-12 h-12 text-muted-foreground/35"
+                              />
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-4 md:p-5 flex-1 flex flex-col justify-between gap-2">
+                          <div>
+                            {person.department && (
+                              <p className="text-[13px] font-medium text-nagari-red-ink mb-1">
+                                {person.department}
+                              </p>
+                            )}
+                            <h3 className="font-serif font-bold text-lg text-foreground leading-snug">
+                              {person.name}
+                            </h3>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {person.position}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </section>

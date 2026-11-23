@@ -1,16 +1,12 @@
-import { useEffect } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useState, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
-  Layers, Map as MapIcon, Info, Loader2, Navigation
+  Layers, Map as MapIcon, ChevronLeft, ChevronRight,
+  Maximize2, Minimize2, Globe
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { useWebGIS, useJorongs, useNagariProfile } from "@/lib/api";
-import PageHeader from "@/components/layout/PageHeader";
-import PageBackground from "@/components/layout/PageBackground";
 import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import mapImage from "@assets/generated_images/digital_map_of_village.png";
-import { MapContainer, TileLayer, GeoJSON, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, GeoJSON, Marker, Popup, ZoomControl, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
@@ -22,28 +18,184 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Helper: auto-zoom map to fit GeoJSON bounds
-function MapBoundsUpdater({ regions }: { regions: any[] }) {
+// Helper: Extract Centroid from GeoJSON geometry
+function extractCentroid(geom: any, fallback: [number, number] = [-0.664676, 100.959335]): [number, number] {
+  if (!geom) return fallback;
+  try {
+    let g = geom;
+    if (typeof g === 'string') {
+      try { g = JSON.parse(g); } catch (e) {}
+    }
+    if (g?.geometry) g = g.geometry;
+    const rawCoords = g?.coordinates || g?.geojson?.coordinates || (Array.isArray(g) ? g : null);
+    if (!rawCoords) return fallback;
+
+    const points: [number, number][] = [];
+    const traverse = (item: any) => {
+      if (!Array.isArray(item) || item.length === 0) return;
+      if (item.length >= 2 && typeof item[0] === 'number' && typeof item[1] === 'number') {
+        const lng = Number(item[0]);
+        const lat = Number(item[1]);
+        if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+          points.push([lat, lng]);
+        }
+        return;
+      }
+      for (const child of item) traverse(child);
+    };
+    traverse(rawCoords);
+
+    if (points.length === 0) return fallback;
+    let sumLat = 0;
+    let sumLng = 0;
+    for (const pt of points) {
+      sumLat += pt[0];
+      sumLng += pt[1];
+    }
+    return [sumLat / points.length, sumLng / points.length];
+  } catch (e) {
+    return fallback;
+  }
+}
+
+// Vector Marker Generator for POI & Fasilitas
+function createPortalMarkerIcon(type: string = 'Lokasi', color: string = '#37539f') {
+  const t = (type || '').toLowerCase();
+  let emoji = '📍';
+  let bg = color;
+
+  if (t.includes('sakit') || t.includes('puskesmas') || t.includes('posyandu') || t.includes('klinik') || t.includes('kesehatan')) {
+    emoji = '🏥';
+    bg = '#dc2626';
+  } else if (t.includes('sekolah') || t.includes('pendidikan') || t.includes('sd') || t.includes('smp') || t.includes('sma') || t.includes('pesantren')) {
+    emoji = '🎓';
+    bg = '#37539f';
+  } else if (t.includes('masjid') || t.includes('musholla') || t.includes('ibadah') || t.includes('surau')) {
+    emoji = '🕌';
+    bg = '#059669';
+  } else if (t.includes('kantor') || t.includes('pemerintahan') || t.includes('balai') || t.includes('desa') || t.includes('nagari')) {
+    emoji = '🏢';
+    bg = '#1d4ed8';
+  } else if (t.includes('kebun') || t.includes('perkebunan') || t.includes('tani') || t.includes('sawah') || t.includes('hutan')) {
+    emoji = '🌴';
+    bg = '#16a34a';
+  } else if (t.includes('umkm') || t.includes('pasar') || t.includes('usaha') || t.includes('toko') || t.includes('warung')) {
+    emoji = '🏪';
+    bg = '#d97706';
+  } else if (t.includes('infrastruktur') || t.includes('jembatan') || t.includes('jalan') || t.includes('irigasi') || t.includes('drainase')) {
+    emoji = '🏗️';
+    bg = '#f59e0b';
+  }
+
+  return L.divIcon({
+    className: 'portal-custom-marker',
+    html: `
+      <div style="
+        width: 32px;
+        height: 32px;
+        border-radius: 50% 50% 50% 0;
+        background: ${bg};
+        transform: rotate(-45deg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid #ffffff;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+        cursor: pointer;
+      ">
+        <span style="
+          transform: rotate(45deg);
+          font-size: 14px;
+          line-height: 1;
+        ">${emoji}</span>
+      </div>
+    `,
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+    popupAnchor: [0, -30]
+  });
+}
+
+// Basemap Tiles: Standar (Default) and Satelit
+const BASEMAP_TILES = {
+  street: {
+    name: 'Peta Standar (OSM)',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    subdomains: 'abc',
+    maxZoom: 19
+  },
+  satellite: {
+    name: 'Citra Satelit (Esri)',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+    subdomains: 'abcd',
+    maxZoom: 19
+  }
+};
+
+// Helper: Invalidate map size on load/resize to guarantee full canvas rendering
+function MapResizer() {
+  const map = useMap();
+  useEffect(() => {
+    map.invalidateSize();
+    const t1 = setTimeout(() => map.invalidateSize(), 150);
+    const t2 = setTimeout(() => map.invalidateSize(), 600);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [map]);
+  return null;
+}
+
+// Helper: Auto-zoom map to fit all regions and jorongs
+function MapBoundsUpdater({ regions, jorongs, flyToCoords }: { regions: any[], jorongs: any[], flyToCoords: [number, number] | null }) {
   const map = useMap();
   
   useEffect(() => {
+    if (flyToCoords) {
+      map.flyTo(flyToCoords, 16, { duration: 1.2 });
+      return;
+    }
+
     if (regions && regions.length > 0) {
       try {
-        const region = regions[0];
-        if (region.geometry) {
-          const parsedGeometry = typeof region.geometry === 'string' ? JSON.parse(region.geometry) : region.geometry;
-          const finalGeom = parsedGeometry.geometry || parsedGeometry;
-          const geojsonLayer = L.geoJSON(finalGeom);
-          const bounds = geojsonLayer.getBounds();
-          if (bounds.isValid()) {
-            map.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
+        const totalBounds = L.latLngBounds([]);
+        
+        // Find Batas Nagari first or aggregate all
+        const batasNagari = regions.find(r => r.properties?.tipe === 'Batas Nagari' || r.properties?.tipe === 'Nagari');
+        const targetRegions = batasNagari ? [batasNagari] : regions;
+
+        targetRegions.forEach(region => {
+          if (region.geometry) {
+            const parsedGeometry = typeof region.geometry === 'string' ? JSON.parse(region.geometry) : region.geometry;
+            const finalGeom = parsedGeometry.geometry || parsedGeometry;
+            const geojsonLayer = L.geoJSON(finalGeom);
+            const b = geojsonLayer.getBounds();
+            if (b.isValid()) {
+              totalBounds.extend(b);
+            }
           }
+        });
+
+        // Also extend with jorong coordinates
+        if (!batasNagari && jorongs && jorongs.length > 0) {
+          jorongs.forEach(j => {
+            if (j.koordinat_lat && j.koordinat_lng) {
+              totalBounds.extend([parseFloat(j.koordinat_lat), parseFloat(j.koordinat_lng)]);
+            }
+          });
+        }
+
+        if (totalBounds.isValid()) {
+          map.fitBounds(totalBounds, { padding: [40, 40], maxZoom: 13 });
         }
       } catch (e) {
         console.error("Failed to fit bounds:", e);
       }
     }
-  }, [regions, map]);
+  }, [regions, jorongs, flyToCoords, map]);
 
   return null;
 }
@@ -57,291 +209,721 @@ export default function GIS() {
   const jorongs = jorongsData?.data || [];
   const profile = profileData?.data;
 
-  // Extract regions from API response
-  const regions = webgis?.layers?.regions || [];
-  const facilities = webgis?.layers?.facilities || (webgis as any)?.facilities || [];
+  // Extract all layers from API response
+  const regions = useMemo(() => webgis?.layers?.regions || [], [webgis]);
+  const facilities = useMemo(() => webgis?.layers?.facilities || (webgis as any)?.facilities || [], [webgis]);
+  const locations = useMemo(() => webgis?.layers?.locations || [], [webgis]);
+  const infrastruktur = useMemo(() => (webgis?.layers as any)?.infrastruktur || [], [webgis]);
 
-  // Build GeoJSON FeatureCollection from regions
-  const featureCollection = regions.length > 0 ? {
-    type: "FeatureCollection",
-    features: regions.map((region: any) => {
-      let parsedGeometry = typeof region.geometry === 'string' ? JSON.parse(region.geometry) : region.geometry;
-      return {
-        type: "Feature",
-        geometry: parsedGeometry.geometry || parsedGeometry,
-        properties: region.properties || {}
-      };
-    })
-  } as any : null;
+  // Sort regions: Outer Batas Nagari first (rendered at bottom), Inner Jorongs & Zonasi rendered on top
+  const sortedRegions = useMemo(() => {
+    return [...regions].sort((a, b) => {
+      const isNagariA = ['nagari', 'batas nagari'].includes(String(a.properties?.tipe || '').toLowerCase());
+      const isNagariB = ['nagari', 'batas nagari'].includes(String(b.properties?.tipe || '').toLowerCase());
+      if (isNagariA && !isNagariB) return -1;
+      if (!isNagariA && isNagariB) return 1;
+      return 0;
+    });
+  }, [regions]);
 
-  const defaultCenter: [number, number] = [
-    webgis?.center?.lat || -0.67, 
-    webgis?.center?.lng || 101.0
-  ];
+  // Active Basemap: DEFAULT TO STREET (Peta Standar)
+  const [mapView, setMapView] = useState<'street' | 'satellite'>('street');
+  const [flyToCoords, setFlyToCoords] = useState<[number, number] | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Active Layer Toggles
+  const [layerVisibility, setLayerVisibility] = useState({
+    regions: true,
+    jorongs: true,
+    facilities: true,
+    locations: true,
+    infrastruktur: true
+  });
+
+  const defaultCenter: [number, number] = useMemo(() => {
+    return [
+      webgis?.center?.lat || -0.664676, 
+      webgis?.center?.lng || 100.959335
+    ];
+  }, [webgis]);
+
+  const currentTile = BASEMAP_TILES[mapView] || BASEMAP_TILES.street;
 
   return (
-    <PageBackground>
+    <div className="h-screen w-screen flex flex-col bg-background overflow-hidden select-none">
       <Navbar />
-      <PageHeader 
-        title="WebGIS Digital" 
-        description="Sistem Informasi Geografis interaktif untuk pemetaan batas wilayah, potensi, dan sarana publik."
-        image={mapImage}
-      />
       
-      <div className="container mx-auto px-4 py-16 md:py-24">
-        <motion.div 
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="bg-white/80 dark:bg-[#0b2023]/60 backdrop-blur-xl rounded-[2.5rem] shadow-[0_30px_60px_rgba(0,0,0,0.6)] border border-black/5 dark:border-white/10 flex flex-col lg:flex-row h-[85vh] min-h-[650px] relative overflow-hidden group/map"
-        >
-          {/* Subtle glow border effect */}
-          <div className="absolute inset-0 pointer-events-none rounded-[2.5rem] border border-teal-300 dark:border-[#3fd5ba]/20 opacity-0 group-hover/map:opacity-100 transition-opacity duration-1000" />
-          
-          {/* Sidebar Controls */}
-          <div className="w-full lg:w-96 bg-slate-50/90 dark:bg-[#0a1a1c]/90 backdrop-blur-2xl p-8 border-r border-black/5 dark:border-white/10 flex flex-col gap-8 z-10 
-                          shadow-[20px_0_40px_-20px_rgba(0,0,0,0.5)] lg:overflow-y-auto custom-scrollbar">
-            
-            <div className="text-center pb-6 border-b border-black/5 dark:border-white/10">
-              <div className="inline-flex items-center gap-2 text-teal-600 dark:text-[#3fd5ba] font-bold uppercase tracking-[0.2em] text-[10px] mb-3 bg-teal-600/10 dark:bg-[#3fd5ba]/10 px-4 py-1.5 rounded-full border border-teal-300 dark:border-[#3fd5ba]/20 shadow-[0_0_15px_rgba(63,213,186,0.15)]">
-                <Navigation size={14} />
-                <span>Navigasi Peta</span>
-              </div>
-              <h3 className="text-2xl font-serif font-bold text-slate-800 dark:text-white tracking-wide">
-                Panel Interaktif
-              </h3>
-            </div>
+      {/* FULL-PAGE WEBGIS CONTAINER PLACED STRICTLY BELOW NAVBAR */}
+      <main
+        id="main"
+        className={`relative w-full overflow-hidden ${
+          isFullscreen 
+            ? 'fixed inset-0 z-[99999] h-screen bg-background' 
+            : 'h-[calc(100vh-72px)] mt-[72px]'
+        }`}
+        style={{ minHeight: '400px' }}
+      >
+        {/* Tailwind Leaflet CSS Overrides */}
+        <style>{`
+          .leaflet-container {
+            width: 100% !important;
+            height: 100% !important;
+            z-index: 1 !important;
+            background: #f8fafc !important;
+          }
+          .leaflet-container img.leaflet-tile {
+            max-width: none !important;
+            max-height: none !important;
+            width: 256px !important;
+            height: 256px !important;
+          }
+          .leaflet-container img {
+            max-width: none !important;
+            max-height: none !important;
+          }
+          .leaflet-tile {
+            visibility: inherit !important;
+          }
+          .leaflet-pane {
+            z-index: 400 !important;
+          }
+          .leaflet-top,
+          .leaflet-bottom {
+            z-index: 500 !important;
+          }
+        `}</style>
 
-            <div className="space-y-4">
-              <h4 className="text-xs font-bold text-slate-600 dark:text-white/40 uppercase tracking-[0.2em] flex items-center gap-2">
-                <Layers size={14} /> Layer Aktif
-              </h4>
-              <div className="space-y-3 relative">
-                <div className="absolute left-3 top-2 bottom-2 w-px bg-gradient-to-b from-[#3fd5ba]/50 via-[#3fd5ba]/20 to-transparent pointer-events-none" />
-                {["Batas Wilayah", "Fasilitas Umum", "Infrastruktur", "Tutupan Lahan"].map((layer: string, i: number) => (
-                  <motion.label 
-                    key={layer} 
-                    whileHover={{ x: 5 }}
-                    className="flex items-center gap-4 pl-8 p-3 rounded-xl hover:bg-white/[0.03] cursor-pointer transition-colors relative group"
-                  >
-                    <div className="absolute left-2.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-teal-500 dark:bg-[#3fd5ba] shadow-[0_0_8px_rgba(63,213,186,0.8)]" />
-                    <input type="checkbox" className="w-5 h-5 text-teal-600 dark:text-[#3fd5ba] rounded bg-white dark:bg-[#0b2023] border border-black/5 dark:border-white/20 focus:ring-[#3fd5ba] focus:ring-offset-[#0a1a1c] cursor-pointer accent-[#3fd5ba]" defaultChecked={i < 2} />
-                    <span className="text-sm font-medium text-slate-600 dark:text-white/80 group-hover:text-slate-800 dark:text-white transition-colors">{layer}</span>
-                  </motion.label>
-                ))}
-              </div>
-            </div>
-
-            {/* Jorongs List */}
-            {jorongs.length > 0 && (
-              <div className="space-y-4 pt-4 border-t border-black/5 dark:border-white/10">
-                <h4 className="text-xs font-bold text-slate-600 dark:text-white/40 uppercase tracking-[0.2em] flex items-center gap-2">
-                  <MapIcon size={14} /> Entitas Wilayah
-                </h4>
-                <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                  {jorongs.map((jorong: any) => (
-                    <div key={jorong.id} className="text-sm text-slate-600 dark:text-white/60 p-3 bg-white/[0.02] border border-black/5 dark:border-white/5 rounded-xl flex items-center justify-between hover:bg-white/[0.05] hover:border-blue-500/30 transition-colors group cursor-pointer">
-                      <div className="flex items-center gap-3">
-                        <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.6)]"></div>
-                        <span className="font-medium group-hover:text-slate-800 dark:text-white transition-colors">{jorong.nama}</span>
-                      </div>
-                      <span className="text-[10px] font-bold text-slate-600 dark:text-white/30 uppercase tracking-widest bg-white/[0.05] px-2 py-0.5 rounded">Jorong</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-4 pt-4 border-t border-black/5 dark:border-white/10">
-              <h4 className="text-xs font-bold text-slate-600 dark:text-white/40 uppercase tracking-[0.2em] flex items-center gap-2">
-                <Info size={14} /> Legenda
-              </h4>
-              <div className="space-y-3 text-sm bg-white/[0.02] p-5 rounded-2xl border border-black/5 dark:border-white/5">
-                {[
-                  { color: "#ef4444", label: "Batas Wilayah Nagari", isLine: false },
-                  { color: "#3b82f6", label: "Titik Pusat Jorong", isLine: false },
-                  { color: "#22c55e", label: "Fasilitas Publik / Aset", isLine: false },
-                  { color: "#9ca3af", label: "Jalan Utama", isLine: true }
-                ].map((item, index) => (
-                  <div key={index} className="flex items-center gap-3">
-                    {item.isLine ? (
-                      <div className="w-6 h-1 rounded-full" style={{ backgroundColor: item.color }} />
-                    ) : (
-                      <div 
-                        className="w-4 h-4 rounded-full border-2" 
-                        style={{ 
-                          backgroundColor: `${item.color}33`, 
-                          borderColor: item.color,
-                          boxShadow: `0 0 10px ${item.color}40`
-                        }}
-                      />
-                    )}
-                    <span className="font-light text-slate-600 dark:text-white/70">{item.label}</span>
+        {/* FLOATING SIDEBAR CONTROL PANEL (Positioned below navbar inside map canvas) */}
+        <AnimatePresence>
+          {isSidebarOpen && (
+            <motion.div
+              initial={{ x: -340, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -340, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="absolute top-6 left-4 sm:left-6 z-[500] w-80 max-w-[calc(100%-2rem)] max-h-[calc(100%-4rem)] bg-card rounded-2xl shadow-lg border border-border flex flex-col overflow-hidden text-foreground"
+            >
+              {/* Sidebar Header */}
+              <div className="p-4 border-b border-border flex items-center justify-between bg-muted/50">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-lg bg-nagari-red flex items-center justify-center text-white">
+                    <Globe aria-hidden="true" size={18} />
                   </div>
-                ))}
-              </div>
-            </div>
-            
-            {/* Nagari Info */}
-            {profile && (
-              <div className="mt-auto pt-6 border-t border-black/5 dark:border-white/10 relative">
-                <div className="absolute -left-8 -top-8 w-24 h-24 bg-teal-600/10 dark:bg-[#3fd5ba]/10 rounded-full blur-[20px]" />
-                <h4 className="font-bold text-slate-800 dark:text-white text-base font-serif relative z-10">{profile.nama_nagari || 'Nagari'}</h4>
-                <p className="text-xs text-slate-600 dark:text-white/50 mt-1 font-light relative z-10">
-                  {profile.kecamatan && `Kec. ${profile.kecamatan}`}{profile.kabupaten && `, ${profile.kabupaten}`}
-                </p>
-                <div className="flex gap-2 mt-4 flex-wrap relative z-10">
-                  {profile.luas_wilayah && (
-                    <span className="text-[10px] font-bold text-teal-600 dark:text-[#3fd5ba] bg-teal-600/10 dark:bg-[#3fd5ba]/10 border border-teal-300 dark:border-[#3fd5ba]/20 px-3 py-1.5 rounded-full uppercase tracking-widest shadow-inner">
-                      Luas: {profile.luas_wilayah} km²
-                    </span>
-                  )}
-                  {profile.ketinggian && (
-                     <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 rounded-full uppercase tracking-widest shadow-inner">
-                      Elevasi: {profile.ketinggian} mdpl
-                    </span>
-                  )}
+                  <div>
+                    <h1 className="text-sm font-bold tracking-tight text-foreground">WebGIS Nagari</h1>
+                    <p className="text-[13px] text-muted-foreground">Peta Spasial &amp; Fasilitas</p>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  aria-label="Sembunyikan panel peta"
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="w-10 h-10 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors"
+                  title="Sembunyikan Panel"
+                >
+                  <ChevronLeft aria-hidden="true" size={18} />
+                </button>
               </div>
-            )}
-          </div>
 
-          {/* Map Area - Leaflet */}
-          <div className="flex-1 relative bg-slate-50 dark:bg-[#0a1a1c] map-dark-theme-wrapper">
-            {/* Dark vignette effect over map edges */}
-            <div className="absolute inset-0 z-[400] pointer-events-none rounded-r-[2.5rem] shadow-[inset_0_0_60px_rgba(0,0,0,0.8)]" />
-            
-            {webgisLoading ? (
-              <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-50/90 dark:bg-[#0a1a1c]/80 backdrop-blur-sm">
-                <div className="w-12 h-12 rounded-full border-b-2 border-t-2 border-teal-300 dark:border-[#3fd5ba] animate-spin mb-4" />
-                <span className="text-teal-600 dark:text-[#3fd5ba] uppercase tracking-widest font-bold text-xs">Merender Peta Spasial...</span>
-              </div>
-            ) : (
-              <div className="w-full h-full [&>.leaflet-container]:bg-[#121212] [&>.leaflet-container]:h-full [&_.leaflet-control-zoom]:border-black/5 dark:border-white/10 [&_.leaflet-control-zoom]:shadow-lg [&_.leaflet-control-zoom-in]:bg-white dark:bg-[#0b2023] [&_.leaflet-control-zoom-in]:text-slate-800 dark:text-white [&_.leaflet-control-zoom-out]:bg-white dark:bg-[#0b2023] [&_.leaflet-control-zoom-out]:text-slate-800 dark:text-white hover:[&_.leaflet-control-zoom-in]:text-teal-600 dark:text-[#3fd5ba] hover:[&_.leaflet-control-zoom-out]:text-teal-600 dark:text-[#3fd5ba]">
-                  <MapContainer 
-                    center={defaultCenter} 
-                    zoom={13} 
-                    scrollWheelZoom={true} 
-                    className="w-full h-full z-0"
-                  >
-                    {/* Menggunakan CartoDB Dark Matter tile layer untuk tema gelap / dark mode GIS */}
-                    <TileLayer
-                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                      url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                      subdomains="abcd"
-                      maxZoom={19}
-                    />
+              <div className="p-4 overflow-y-auto custom-scrollbar space-y-4 flex-1">
+                {/* Basemap Switcher: Standar vs Satelit */}
+                <div className="space-y-1.5">
+                  <span className="text-[13px] font-semibold text-muted-foreground block">
+                    Mode Peta
+                  </span>
+                  <div className="grid grid-cols-2 gap-1.5 bg-muted p-1 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setMapView('street')}
+                      className={`flex items-center justify-center gap-1.5 h-10 px-3 rounded-lg text-[13px] font-semibold transition-colors ${
+                        mapView === 'street'
+                          ? 'bg-card text-nagari-red-ink shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      Standar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMapView('satellite')}
+                      className={`flex items-center justify-center gap-1.5 h-10 px-3 rounded-lg text-[13px] font-semibold transition-colors ${
+                        mapView === 'satellite'
+                          ? 'bg-card text-nagari-red-ink shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      Satelit
+                    </button>
+                  </div>
+                </div>
 
-                    {/* Auto-zoom to region bounds */}
-                    <MapBoundsUpdater regions={regions} />
-
-                    {/* Render GeoJSON Polygon (Batas Wilayah) */}
-                    {featureCollection && (
-                      <GeoJSON 
-                        key={`regions-${regions.length}`}
-                        data={featureCollection}
-                        style={{
-                          color: '#ef4444',
-                          weight: 3,
-                          opacity: 0.8,
-                          fillOpacity: 0.1,
-                          fillColor: '#f87171',
-                          dashArray: '5, 10' // Putus-putus
-                        }}
-                        onEachFeature={(feature, layer) => {
-                          if (feature.properties) {
-                            const name = feature.properties.nama || feature.properties.wadmkd || 'Wilayah';
-                            const desc = feature.properties.deskripsi || '';
-                            layer.bindPopup(`
-                              <div style="font-family: inherit; background:#0b2023; color:#fff; padding:4px;">
-                                <strong style="color:#3fd5ba;font-size:14px;display:block;margin-bottom:4px;">${name}</strong>
-                                ${desc ? `<span style="color:rgba(255,255,255,0.7);font-size:12px;">${desc}</span>` : '<span style="color:rgba(255,255,255,0.5);font-size:11px;">Batas Wilayah Nagari</span>'}
-                              </div>
-                            `);
-                          }
-                        }}
-                      />
-                    )}
-
-                    {/* Render Facility Markers */}
-                    {facilities.map((facility: any) => {
-                      const coords = facility.geometry?.coordinates;
-                      if (!coords || coords.length < 2) return null;
-                      
-                      // Using a custom divIcon for a more cyber look instead of default marker
-                      const modernIcon = L.divIcon({
-                        className: 'cyber-map-icon',
-                        html: `<div style="width:16px;height:16px;background:#22c55e;border-radius:50%;border:2px solid #000;box-shadow:0 0 15px #22c55e;"></div>`,
-                        iconSize: [16, 16],
-                        iconAnchor: [8, 8]
-                      });
-
-                      return (
-                        <Marker key={facility.id} position={[coords[1], coords[0]]} icon={modernIcon}>
-                          <Popup>
-                            <div style={{ fontFamily: 'inherit', background:'#0b2023', color:'#fff' }}>
-                              <strong style={{color:'#22c55e', fontSize:'14px', display:'block'}}>{facility.properties?.nama || 'Fasilitas'}</strong>
-                              {facility.properties?.jenis && <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px', marginTop:'4px', display:'inline-block' }}>{facility.properties.jenis}</span>}
-                            </div>
-                          </Popup>
-                        </Marker>
-                      );
-                    })}
-
-                    {/* Render Jorong Markers */}
-                    {jorongs.map((jorong: any) => {
-                      if (!jorong.koordinat_lat || !jorong.koordinat_lng) return null;
-                      
-                      const jorongIcon = L.divIcon({
-                        className: 'cyber-map-icon-jorong',
-                        html: `<div style="width:20px;height:20px;background:#3b82f6;border-radius:50%;border:3px solid #000;box-shadow:0 0 20px #3b82f6;"></div>`,
-                        iconSize: [20, 20],
-                        iconAnchor: [10, 10]
-                      });
-
-                      return (
-                        <Marker 
-                          key={`jorong-${jorong.id}`} 
-                          position={[parseFloat(jorong.koordinat_lat), parseFloat(jorong.koordinat_lng)]}
-                          icon={jorongIcon}
+                {/* Layer Visibility Toggles */}
+                <div className="space-y-2 pt-2 border-t border-border">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[13px] font-semibold text-muted-foreground flex items-center gap-1.5">
+                      <Layers aria-hidden="true" size={14} /> Layer Spasial
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    {[
+                      { key: 'regions', label: 'Batas & Zonasi', count: regions.length, color: '#b82026' },
+                      { key: 'locations', label: 'Titik POI (RS, Sekolah, dll)', count: locations.length, color: '#37539f' },
+                      { key: 'facilities', label: 'Aset & Fasilitas Nagari', count: facilities.length, color: '#1e7a56' },
+                      { key: 'infrastruktur', label: 'Infrastruktur', count: infrastruktur.length, color: '#b7791f' },
+                      { key: 'jorongs', label: 'Pusat Jorong', count: jorongs.length, color: '#2b6cb0' },
+                    ].map((item) => (
+                      <label
+                        key={item.key}
+                        className="flex items-center justify-between p-2 rounded-xl hover:bg-muted/60 cursor-pointer transition-colors"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <input
+                            type="checkbox"
+                            checked={layerVisibility[item.key as keyof typeof layerVisibility]}
+                            onChange={(e) => setLayerVisibility({ ...layerVisibility, [item.key]: e.target.checked })}
+                            className="w-4 h-4 rounded border-border cursor-pointer accent-nagari-red"
+                          />
+                          <span className="text-[13px] font-medium text-foreground">{item.label}</span>
+                        </div>
+                        <span
+                          className="text-[13px] font-semibold px-2 py-0.5 rounded-md tabular-nums"
+                          style={{ backgroundColor: `${item.color}18`, color: item.color }}
                         >
-                          <Popup>
-                            <div style={{ fontFamily: 'inherit', background:'#0b2023', color:'#fff' }}>
-                              <strong style={{color:'#3b82f6', fontSize:'14px', display:'block'}}>Jorong {jorong.nama}</strong>
-                              {jorong.kepala_jorong && <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px', marginTop:'6px', display:'inline-block' }}>Wali: <b>{jorong.kepala_jorong}</b></span>}
-                            </div>
-                          </Popup>
-                        </Marker>
-                      );
-                    })}
-                  </MapContainer>
-              </div>
-            )}
-          </div>
-        </motion.div>
+                          {item.count}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
 
-        {/* Custom style overrides for Leaflet Popups to match dark theme */}
+                {/* Quick Jorong Focus */}
+                {jorongs.length > 0 && (
+                  <div className="space-y-2 pt-2 border-t border-border">
+                    <span className="text-[13px] font-semibold text-muted-foreground flex items-center gap-1.5">
+                      <MapIcon aria-hidden="true" size={14} /> Daftar Jorong ({jorongs.length})
+                    </span>
+                    <div className="space-y-1 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
+                      {jorongs.map((jorong: any) => (
+                        <button
+                          key={jorong.id}
+                          type="button"
+                          onClick={() => {
+                            if (jorong.koordinat_lat && jorong.koordinat_lng) {
+                              setFlyToCoords([parseFloat(jorong.koordinat_lat), parseFloat(jorong.koordinat_lng)]);
+                            }
+                          }}
+                          className="w-full text-left text-[13px] p-2.5 rounded-xl bg-muted/50 border border-border flex items-center justify-between hover:bg-muted transition-colors group"
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <span className="w-2 h-2 rounded-full bg-cat-2 flex-shrink-0" />
+                            <span className="font-medium truncate text-foreground">
+                              {jorong.nama}
+                            </span>
+                          </div>
+                          <span className="text-[13px] font-semibold text-nagari-red-ink shrink-0 ml-2">
+                            Fokus
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Sidebar Footer: Nagari Summary */}
+              {profile && (
+                <div className="p-3.5 bg-muted/50 border-t border-border text-[13px]">
+                  <div className="font-semibold text-foreground truncate">{profile.nama_nagari || 'Nagari'}</div>
+                  <div className="text-[13px] text-muted-foreground mt-0.5">
+                    {profile.kecamatan && `Kec. ${profile.kecamatan}`}{profile.kabupaten && `, ${profile.kabupaten}`}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* FLOATING TOGGLE BUTTON WHEN SIDEBAR IS CLOSED */}
+        {!isSidebarOpen && (
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen(true)}
+            className="absolute top-6 left-4 sm:left-6 z-[500] flex items-center gap-2 bg-card px-4 h-11 rounded-xl shadow-md border border-border text-[13px] font-semibold text-foreground hover:bg-muted transition-colors"
+          >
+            <Layers aria-hidden="true" size={16} className="text-nagari-red-ink" />
+            <span>Buka Panel Peta</span>
+            <ChevronRight aria-hidden="true" size={16} />
+          </button>
+        )}
+
+        {/* FLOATING TOP-RIGHT UTILITIES */}
+        <div className="absolute top-6 right-4 sm:right-6 z-[500] flex items-center gap-2">
+          {/* Quick Basemap Pill */}
+          <div className="bg-card p-1 rounded-xl shadow-md border border-border flex gap-1">
+            <button
+              type="button"
+              onClick={() => setMapView('street')}
+              className={`px-3 h-9 rounded-lg text-[13px] font-semibold transition-colors ${
+                mapView === 'street'
+                  ? 'bg-nagari-red text-white'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              }`}
+            >
+              Standar
+            </button>
+            <button
+              type="button"
+              onClick={() => setMapView('satellite')}
+              className={`px-3 h-9 rounded-lg text-[13px] font-semibold transition-colors ${
+                mapView === 'satellite'
+                  ? 'bg-nagari-red text-white'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              }`}
+            >
+              Satelit
+            </button>
+          </div>
+
+          {/* Fullscreen Toggle */}
+          <button
+            type="button"
+            aria-label={isFullscreen ? 'Keluar layar penuh' : 'Mode layar penuh'}
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            className="bg-card w-11 h-11 rounded-xl shadow-md border border-border text-foreground hover:bg-muted flex items-center justify-center transition-colors"
+            title={isFullscreen ? 'Keluar Fullscreen' : 'Layar Penuh'}
+          >
+            {isFullscreen ? <Minimize2 aria-hidden="true" size={16} /> : <Maximize2 aria-hidden="true" size={16} />}
+          </button>
+        </div>
+
+        {/* LOADING STATE */}
+        {webgisLoading ? (
+          <div className="w-full h-full flex flex-col items-center justify-center bg-background">
+            <div className="w-10 h-10 rounded-full border-4 border-nagari-red border-t-transparent animate-spin mb-4" />
+            <span className="text-muted-foreground font-medium text-sm">
+              Memuat peta spasial nagari...
+            </span>
+          </div>
+        ) : (
+          <div className="w-full h-full relative" style={{ height: '100%', width: '100%' }}>
+            <MapContainer 
+              center={defaultCenter} 
+              zoom={12} 
+              scrollWheelZoom={true} 
+              zoomControl={false}
+              className="w-full h-full z-0"
+              style={{ height: '100%', width: '100%' }}
+            >
+              <TileLayer
+                key={mapView}
+                attribution={currentTile.attribution}
+                url={currentTile.url}
+                subdomains={currentTile.subdomains}
+                maxZoom={currentTile.maxZoom}
+              />
+
+              {/* Force map resize recalculation on render */}
+              <MapResizer />
+
+              {/* Reposition zoom control to bottom-right to keep left area unobstructed */}
+              <ZoomControl position="bottomright" />
+
+              {/* Auto-fit map to region and jorong bounds */}
+              <MapBoundsUpdater regions={regions} jorongs={jorongs} flyToCoords={flyToCoords} />
+
+              {/* LAYER 1: REGIONS (Batas Wilayah & Poligon Zonasi) */}
+              {layerVisibility.regions && sortedRegions.map((region: any) => {
+                if (!region.geometry) return null;
+                let parsedGeom = typeof region.geometry === 'string' ? JSON.parse(region.geometry) : region.geometry;
+                const finalGeom = parsedGeom.geometry || parsedGeom;
+                const regColor = region.properties?.warna || '#ef4444';
+                const props = region.properties || {};
+                const isNagari = ['nagari', 'batas nagari'].includes(String(props.tipe || '').toLowerCase());
+                const isJorong = String(props.tipe || '').toLowerCase().includes('jorong');
+
+                // Display Name Formatting
+                let displayName = props.nama || 'Wilayah';
+                let displaySubtitle = props.tipe || 'Zonasi';
+
+                if (isNagari) {
+                  displayName = displayName.toLowerCase().includes('nagari') ? displayName : `Batas Nagari ${displayName}`;
+                  displaySubtitle = 'Wilayah Administrasi Nagari';
+                } else if (isJorong) {
+                  displayName = displayName.toLowerCase().includes('jorong') ? displayName : `Jorong ${displayName}`;
+                  displaySubtitle = 'Wilayah Administratif Jorong';
+                }
+
+                return (
+                  <GeoJSON 
+                    key={`portal-reg-${region.id}-${mapView}`}
+                    data={{
+                      type: "Feature",
+                      geometry: finalGeom,
+                      properties: props
+                    } as any}
+                    style={{
+                      color: regColor,
+                      weight: isNagari ? 3.5 : 2.5,
+                      opacity: 0.9,
+                      fillOpacity: isNagari ? 0.04 : 0.28,
+                      fillColor: regColor,
+                      dashArray: isNagari ? '6, 6' : undefined
+                    }}
+                    onEachFeature={(feature, layer) => {
+                      const p = feature.properties || {};
+                      const luas = p.luas_wilayah ? `${Number(p.luas_wilayah).toFixed(2)} Ha` : null;
+                      const centroid = extractCentroid(finalGeom, defaultCenter);
+                      const cLat = centroid[0];
+                      const cLng = centroid[1];
+                      const hasStats = p.total_warga !== undefined || p.total_kk !== undefined || p.kepala_jorong;
+                      const hasSocial = (p.kemiskinan || 0) > 0 || (p.rtlh || 0) > 0 || (p.stunting || 0) > 0 || (p.disabilitas || 0) > 0;
+
+                      layer.bindPopup(`
+                        <div style="font-family: inherit; min-width: 260px; max-width: 320px; font-size: 12px; color: #1e293b; line-height: 1.4;">
+                          <!-- Header: Nama Wilayah + Badge Tipe + Luas -->
+                          <div style="margin-bottom: 8px; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px;">
+                            <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 2px;">
+                              ${displayName}
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #64748b;">
+                              <span style="width: 8px; height: 8px; border-radius: 50%; background: ${regColor};"></span>
+                              <span style="font-weight: 700; color: ${regColor};">${displaySubtitle}</span>
+                              ${luas ? `<span>· Luas: <strong>${luas}</strong></span>` : ''}
+                            </div>
+                          </div>
+
+                          ${p.deskripsi ? `
+                            <div style="font-size: 11.5px; color: #475569; margin-bottom: 8px; background: #f8fafc; padding: 6px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                              ${p.deskripsi}
+                            </div>
+                          ` : ''}
+
+                          <!-- Info Demografi & Sosial Warga -->
+                          ${hasStats ? `
+                            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; font-size: 11.5px;">
+                              ${p.kepala_jorong ? `<div style="color: #166534; font-size: 11px; margin-bottom: 4px;">Wali Jorong: <strong style="color: #14532d;">${p.kepala_jorong}</strong></div>` : ''}
+                              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; color: #166534; font-size: 11.5px;">
+                                <span>👥 Penduduk: <strong style="color: #14532d;">${(p.total_warga || 0).toLocaleString('id-ID')}</strong></span>
+                                <span>🏠 KK: <strong style="color: #14532d;">${(p.total_kk || 0).toLocaleString('id-ID')}</strong></span>
+                              </div>
+                              ${hasSocial ? `
+                                <div style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed #86efac; font-size: 10.5px; color: #15803d; display: flex; flex-wrap: gap: 5px;">
+                                  ${(p.kemiskinan || 0) > 0 ? `<span style="background: #dcfce7; padding: 1px 5px; border-radius: 3px;">Miskin: <strong>${p.kemiskinan}</strong></span>` : ''}
+                                  ${(p.rtlh || 0) > 0 ? `<span style="background: #dcfce7; padding: 1px 5px; border-radius: 3px;">RTLH: <strong>${p.rtlh}</strong></span>` : ''}
+                                  ${(p.stunting || 0) > 0 ? `<span style="background: #dcfce7; padding: 1px 5px; border-radius: 3px;">Stunting: <strong>${p.stunting}</strong></span>` : ''}
+                                  ${(p.disabilitas || 0) > 0 ? `<span style="background: #dcfce7; padding: 1px 5px; border-radius: 3px;">Disabilitas: <strong>${p.disabilitas}</strong></span>` : ''}
+                                </div>
+                              ` : ''}
+                            </div>
+                          ` : ''}
+
+                          <!-- Footer Koordinat & Link -->
+                          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: #64748b; padding-top: 4px;">
+                            <span>📍 Pusat: ${cLat.toFixed(5)}, ${cLng.toFixed(5)}</span>
+                            <a href="https://www.google.com/maps?q=${cLat},${cLng}" target="_blank" rel="noreferrer" style="color: #059669; font-weight: 700; text-decoration: none;">
+                              Google Maps ↗
+                            </a>
+                          </div>
+                        </div>
+                      `);
+                    }}
+                  />
+                );
+              })}
+
+              {/* LAYER 2: POI LOCATIONS (Titik Penting: RS, Sekolah, Kebun, dll) */}
+              {layerVisibility.locations && locations.map((loc: any) => {
+                const coords = loc.geometry?.coordinates;
+                if (!coords || coords.length < 2) return null;
+                const props = loc.properties || {};
+                const phone = props.telepon || '';
+                const cleanPhone = phone.replace(/[^0-9]/g, '');
+
+                return (
+                  <Marker 
+                    key={`portal-loc-${loc.id}`} 
+                    position={[coords[1], coords[0]]} 
+                    icon={createPortalMarkerIcon(props.jenis, '#37539f')}
+                  >
+                    <Popup>
+                      <div style={{ fontFamily: 'inherit', minWidth: '250px', maxWidth: '300px', fontSize: '12px', color: '#1e293b' }}>
+                        {/* Optional Photo Thumbnail */}
+                        {props.foto && (
+                          <div style={{ width: '100%', height: '110px', borderRadius: '8px', overflow: 'hidden', marginBottom: '8px', border: '1px solid #e2e8f0' }}>
+                            <img src={props.foto} alt={props.nama} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          </div>
+                        )}
+
+                        {/* Header */}
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '6px', marginBottom: '4px' }}>
+                          <strong style={{ fontSize: '13.5px', color: '#0f172a', lineHeight: 1.3 }}>{props.nama}</strong>
+                          <span style={{ backgroundColor: '#eef2ff', color: '#37539f', fontSize: '10px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', flexShrink: 0 }}>
+                            {props.jenis || 'Lokasi'}
+                          </span>
+                        </div>
+
+                        {/* Alamat */}
+                        {props.alamat && (
+                          <div style={{ fontSize: '11.5px', color: '#334155', margin: '4px 0', display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+                            <span style={{ color: '#059669', flexShrink: 0 }}>📍</span>
+                            <span style={{ fontWeight: 600 }}>{props.alamat}</span>
+                          </div>
+                        )}
+
+                        {/* Detail Pengelola & Jam Operasional */}
+                        {(props.penanggung_jawab || props.jam_operasional) && (
+                              <div style={{ background: '#f8fafc', padding: '6px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', margin: '6px 0', fontSize: '11px', color: '#475569' }}>
+                                {props.penanggung_jawab && <div style={{ marginBottom: '2px' }}>👤 Pengelola: <strong style={{ color: '#0f172a' }}>{props.penanggung_jawab}</strong></div>}
+                                {props.jam_operasional && <div>⏰ Jam: <strong style={{ color: '#0f172a' }}>{props.jam_operasional}</strong></div>}
+                              </div>
+                        )}
+
+                        {/* Deskripsi */}
+                        {props.deskripsi && (
+                          <div style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic', margin: '4px 0' }}>
+                            {props.deskripsi}
+                          </div>
+                        )}
+
+                        {/* Telepon & WhatsApp Actions */}
+                        {phone && (
+                          <div style={{ display: 'flex', gap: '6px', margin: '8px 0', alignItems: 'center' }}>
+                            <a 
+                              href={`tel:${phone}`}
+                              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', padding: '5px 8px', borderRadius: '6px', backgroundColor: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', fontSize: '11px', fontWeight: 700, textDecoration: 'none' }}
+                            >
+                              📞 {phone}
+                            </a>
+                            {cleanPhone && (
+                              <a
+                                href={`https://wa.me/${cleanPhone}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', padding: '5px 10px', borderRadius: '6px', backgroundColor: '#25d366', color: '#ffffff', fontSize: '11px', fontWeight: 800, textDecoration: 'none' }}
+                              >
+                                WhatsApp ↗
+                              </a>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Footer Link */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '6px', marginTop: '6px', fontSize: '10.5px' }}>
+                          <span style={{ color: '#94a3b8', fontFamily: 'monospace' }}>{coords[1].toFixed(5)}, {coords[0].toFixed(5)}</span>
+                          <a
+                            href={`https://www.google.com/maps?q=${coords[1]},${coords[0]}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ color: '#059669', fontWeight: 700, textDecoration: 'none' }}
+                          >
+                            Petunjuk Arah ↗
+                          </a>
+                        </div>
+                      </div>
+                    </Popup>
+                  </Marker>
+                );
+              })}
+
+              {/* LAYER 3: FACILITIES (Aset & Sarana Publik) */}
+              {layerVisibility.facilities && facilities.map((facility: any) => {
+                const coords = facility.geometry?.coordinates;
+                if (!coords || coords.length < 2) return null;
+                const props = facility.properties || {};
+
+                return (
+                  <Marker 
+                    key={`portal-fac-${facility.id}`} 
+                    position={[coords[1], coords[0]]} 
+                    icon={createPortalMarkerIcon(props.nama + ' ' + (props.jenis || ''), '#22c55e')}
+                  >
+                    <Popup>
+                      <div style={{ fontFamily: 'inherit', minWidth: '220px', maxWidth: '280px', fontSize: '12px', color: '#1e293b' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '6px', marginBottom: '4px' }}>
+                          <strong style={{ fontSize: '13.5px', color: '#0f172a', lineHeight: 1.3 }}>{props.nama}</strong>
+                          <span style={{ backgroundColor: '#eff6ff', color: '#1d4ed8', fontSize: '10px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', flexShrink: 0 }}>
+                            {props.jenis || 'Aset / Fasilitas'}
+                          </span>
+                        </div>
+                        {props.lokasi && (
+                          <div style={{ fontSize: '11.5px', color: '#334155', margin: '4px 0' }}>
+                            📍 {props.lokasi}
+                          </div>
+                        )}
+                        {props.kondisi && (
+                          <div style={{ fontSize: '11px', color: '#475569', margin: '4px 0' }}>
+                            Kondisi: <strong style={{ color: String(props.kondisi).toLowerCase().includes('baik') ? '#16a34a' : '#d97706' }}>{props.kondisi}</strong>
+                          </div>
+                        )}
+                        {props.deskripsi && (
+                          <div style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic', margin: '4px 0' }}>
+                            {props.deskripsi}
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '6px', marginTop: '6px', fontSize: '10.5px' }}>
+                          <span style={{ color: '#94a3b8', fontFamily: 'monospace' }}>{coords[1].toFixed(5)}, {coords[0].toFixed(5)}</span>
+                          <a
+                            href={`https://www.google.com/maps?q=${coords[1]},${coords[0]}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ color: '#059669', fontWeight: 700, textDecoration: 'none' }}
+                          >
+                            Petunjuk Arah ↗
+                          </a>
+                        </div>
+                      </div>
+                    </Popup>
+                  </Marker>
+                );
+              })}
+
+              {/* LAYER 4: INFRASTRUKTUR */}
+              {layerVisibility.infrastruktur && infrastruktur.map((infra: any) => {
+                const coords = infra.geometry?.coordinates;
+                if (!coords || coords.length < 2) return null;
+                const props = infra.properties || {};
+
+                return (
+                  <Marker 
+                    key={`portal-infra-${infra.id}`} 
+                    position={[coords[1], coords[0]]} 
+                    icon={createPortalMarkerIcon(props.kategori || 'Infrastruktur', '#f59e0b')}
+                  >
+                    <Popup>
+                      <div style={{ fontFamily: 'inherit', minWidth: '220px', maxWidth: '280px', fontSize: '12px', color: '#1e293b' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '6px', marginBottom: '4px' }}>
+                          <strong style={{ fontSize: '13.5px', color: '#0f172a', lineHeight: 1.3 }}>{props.nama}</strong>
+                          <span style={{ backgroundColor: '#fffbeb', color: '#b45309', fontSize: '10px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', flexShrink: 0 }}>
+                            {props.kategori || 'Infrastruktur'}
+                          </span>
+                        </div>
+                        {(props.jorong || props.lokasi) && (
+                          <div style={{ fontSize: '11.5px', color: '#334155', margin: '4px 0' }}>
+                            📍 {props.jorong || props.lokasi}
+                          </div>
+                        )}
+                        {props.kondisi && (
+                          <div style={{ fontSize: '11px', color: '#475569', margin: '4px 0' }}>
+                            Kondisi: <strong>{props.kondisi}</strong>
+                          </div>
+                        )}
+                        {props.deskripsi && (
+                          <div style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic', margin: '4px 0' }}>
+                            {props.deskripsi}
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '6px', marginTop: '6px', fontSize: '10.5px' }}>
+                          <span style={{ color: '#94a3b8', fontFamily: 'monospace' }}>{coords[1].toFixed(5)}, {coords[0].toFixed(5)}</span>
+                          <a
+                            href={`https://www.google.com/maps?q=${coords[1]},${coords[0]}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ color: '#059669', fontWeight: 700, textDecoration: 'none' }}
+                          >
+                            Buka Maps ↗
+                          </a>
+                        </div>
+                      </div>
+                    </Popup>
+                  </Marker>
+                );
+              })}
+
+              {/* LAYER 5: JORONGS (Pusat & Demografi Jorong) */}
+              {layerVisibility.jorongs && jorongs.map((jorong: any) => {
+                if (!jorong.koordinat_lat || !jorong.koordinat_lng) return null;
+                const lat = parseFloat(jorong.koordinat_lat);
+                const lng = parseFloat(jorong.koordinat_lng);
+                const stats = jorong.total_warga !== undefined || jorong.total_kk !== undefined;
+
+                return (
+                  <Marker 
+                    key={`portal-jorong-${jorong.id}`} 
+                    position={[lat, lng]}
+                    icon={createPortalMarkerIcon('kantor', '#3b82f6')}
+                  >
+                    <Popup>
+                      <div style={{ fontFamily: 'inherit', minWidth: '240px', maxWidth: '300px', fontSize: '12px', color: '#1e293b' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px', marginBottom: '6px' }}>
+                          <strong style={{ fontSize: '14px', color: '#1d4ed8' }}>
+                            Jorong {jorong.nama}
+                          </strong>
+                          <span style={{ backgroundColor: '#eff6ff', color: '#1d4ed8', fontSize: '10px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px' }}>
+                            Pusat Jorong
+                          </span>
+                        </div>
+                        
+                        {jorong.kepala_jorong && (
+                          <div style={{ fontSize: '11.5px', color: '#334155', marginBottom: '6px' }}>
+                            👤 Wali Jorong: <strong>{jorong.kepala_jorong}</strong>
+                          </div>
+                        )}
+
+                        {stats && (
+                          <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', padding: '6px 8px', marginBottom: '6px', fontSize: '11px', color: '#166534' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '6px' }}>
+                              <span>👥 <strong>{(jorong.total_warga || 0).toLocaleString('id-ID')}</strong> Warga</span>
+                              <span>🏠 <strong>{(jorong.total_kk || 0).toLocaleString('id-ID')}</strong> KK</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {jorong.alamat_kantor && (
+                          <div style={{ fontSize: '11px', color: '#475569', marginBottom: '4px' }}>
+                            🏢 Balai: {jorong.alamat_kantor}
+                          </div>
+                        )}
+
+                        {jorong.telepon && (
+                          <div style={{ fontSize: '11px', color: '#2563eb', marginBottom: '4px' }}>
+                            📞 Kontak: <strong>{jorong.telepon}</strong>
+                          </div>
+                        )}
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '6px', marginTop: '6px', fontSize: '10.5px' }}>
+                          <span>📍 {lat.toFixed(5)}, {lng.toFixed(5)}</span>
+                          <a
+                            href={`https://www.google.com/maps?q=${lat},${lng}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ color: '#059669', fontWeight: 700, textDecoration: 'none' }}
+                          >
+                            Google Maps ↗
+                          </a>
+                        </div>
+                      </div>
+                    </Popup>
+                  </Marker>
+                );
+              })}
+            </MapContainer>
+          </div>
+        )}
+
+        {/* Custom style overrides for Leaflet Popups */}
         <style dangerouslySetInnerHTML={{__html: `
           .leaflet-popup-content-wrapper {
-            background-color: #0b2023 !important;
-            border: 1px solid rgba(255,255,255,0.1) !important;
-            border-radius: 12px !important;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8) !important;
+            background-color: #ffffff !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 14px !important;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.18) !important;
+            padding: 4px !important;
           }
           .leaflet-popup-tip {
-            background-color: #0b2023 !important;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            border-left: 1px solid rgba(255,255,255,0.1);
+            background-color: #ffffff !important;
+            border-top: 1px solid #cbd5e1;
+            border-left: 1px solid #cbd5e1;
           }
           .leaflet-container a.leaflet-popup-close-button {
-            color: rgba(255,255,255,0.5) !important;
+            color: #94a3b8 !important;
+            padding: 4px !important;
           }
           .leaflet-container a.leaflet-popup-close-button:hover {
-            color: #fff !important;
+            color: #0f172a !important;
           }
         `}} />
-      </div>
-      <Footer />
-    </PageBackground>
+      </main>
+    </div>
   );
 }

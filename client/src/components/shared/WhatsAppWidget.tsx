@@ -1,32 +1,24 @@
 
-import { MessageCircle, Loader2 } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { useSiteSettings } from "@/lib/api";
+import { getTenantWhatsAppNumber } from "@/lib/whatsapp";
 
 export default function WhatsAppWidget() {
-  const { data: settingsResponse, isLoading } = useSiteSettings();
-  const settings = settingsResponse?.data;
-  
-  // Get WhatsApp number from settings
-  const whatsappNumber = settings?.whatsapp || '6285126290645';
-  const cleanNumber = whatsappNumber.replace(/[^0-9]/g, "");
-  
-  if (isLoading) return null;
-  
+  const { data: settingsResponse } = useSiteSettings();
+  const whatsappNumber = getTenantWhatsAppNumber(settingsResponse?.data);
+
+  if (!whatsappNumber) return null;
+
   return (
     <a
-      href={`https://wa.me/${cleanNumber}`}
+      href={`https://wa.me/${whatsappNumber}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="fixed bottom-6 right-6 z-50 group"
-      aria-label="Chat via WhatsApp"
+      className="fixed bottom-5 right-5 z-50 inline-flex items-center gap-2.5 h-12 px-4 rounded-full bg-brand-wa text-brand-wa-foreground shadow-md hover:brightness-95 transition-all"
+      aria-label="Hubungi layanan nagari via WhatsApp"
     >
-      <div className="absolute inset-0 bg-green-500 rounded-full animate-ping opacity-20 group-hover:opacity-40" />
-      <div className="relative bg-green-500 text-white p-4 rounded-full shadow-lg hover:shadow-xl hover:bg-green-600 transition-all flex items-center gap-3 group-hover:pr-6">
-        <MessageCircle size={28} />
-        <div className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 ease-in-out whitespace-nowrap">
-          <span className="font-medium text-sm">Chat Layanan 24 Jam</span>
-        </div>
-      </div>
+      <MessageCircle aria-hidden="true" size={20} />
+      <span className="font-medium text-sm hidden sm:inline">Layanan WhatsApp</span>
     </a>
   );
 }

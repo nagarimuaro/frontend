@@ -1,48 +1,73 @@
-// API Configuration
-export const API_BASE_URL = "https://muaro.sintanagari.cloud";
+// API Configuration - 100% dynamic multi-tenant resolution
+// 1. Direct subdomain access (e.g. muaro.sintanagari.cloud) uses active subdomain.
+// 2. Custom domains (e.g. nagarimuaro.id, nagaripulasan.id, nagaritimbulun.id, or any newly added nagari)
+//    route to the central backend API (https://sintanagari.cloud).
+//    The backend TenantMiddleware automatically resolves the nagari from the database
+//    via the X-Tenant-Domain header. NO frontend code edits needed when adding new nagaris!
+export const getApiBaseUrl = (): string => {
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname;
+    
+    if (hostname.endsWith(".sintanagari.cloud") && hostname !== "sintanagari.cloud") {
+      return `https://${hostname}`;
+    }
+  }
+  
+  // Central Multi-tenant Backend Gateway
+  return "https://sintanagari.cloud";
+};
+
+export const API_BASE_URL = getApiBaseUrl();
 
 // CMS Public API Endpoints
 export const CMS_API = {
-  SITE_SETTINGS: `${API_BASE_URL}/api/cms/public/site-settings`,
-  HERO_BANNERS: `${API_BASE_URL}/api/cms/public/hero-banners`,
-  NEWS: `${API_BASE_URL}/api/cms/public/news`,
-  NEWS_DETAIL: (slug: string) => `${API_BASE_URL}/api/cms/public/news/${slug}`,
-  SERVICES: `${API_BASE_URL}/api/cms/public/services`,
-  STAFF: `${API_BASE_URL}/api/cms/public/staff`,
-  KATA_SAMBUTAN: `${API_BASE_URL}/api/cms/public/kata-sambutan`,
-  DOCUMENTS: `${API_BASE_URL}/api/cms/public/documents`,
-  DOCUMENT_DOWNLOAD: (slug: string) => `${API_BASE_URL}/api/cms/public/documents/${slug}/download`,
-  CATEGORIES: `${API_BASE_URL}/api/cms/public/categories`,
-  PAGES: (slug: string) => `${API_BASE_URL}/api/cms/public/pages/${slug}`,
+  get SITE_SETTINGS() { return `${getApiBaseUrl()}/api/cms/public/site-settings`; },
+  get HERO_BANNERS() { return `${getApiBaseUrl()}/api/cms/public/hero-banners`; },
+  get NEWS() { return `${getApiBaseUrl()}/api/cms/public/news`; },
+  NEWS_DETAIL: (slug: string) => `${getApiBaseUrl()}/api/cms/public/news/${slug}`,
+  get SERVICES() { return `${getApiBaseUrl()}/api/cms/public/services`; },
+  get STAFF() { return `${getApiBaseUrl()}/api/cms/public/staff`; },
+  get KATA_SAMBUTAN() { return `${getApiBaseUrl()}/api/cms/public/kata-sambutan`; },
+  get DOCUMENTS() { return `${getApiBaseUrl()}/api/cms/public/documents`; },
+  DOCUMENT_DOWNLOAD: (slug: string) => `${getApiBaseUrl()}/api/cms/public/documents/${slug}/download`,
+  get CATEGORIES() { return `${getApiBaseUrl()}/api/cms/public/categories`; },
+  PAGES: (slug: string) => `${getApiBaseUrl()}/api/cms/public/pages/${slug}`,
 };
 
 // Public Data API Endpoints
 export const PUBLIC_API = {
-  DATA_OVERVIEW: `${API_BASE_URL}/api/public/data-overview`,
-  NAGARI_PROFILE: `${API_BASE_URL}/api/public/nagari-profile`,
-  NAGARI_STATS: `${API_BASE_URL}/api/public/nagari-stats`,
-  JORONGS: `${API_BASE_URL}/api/public/jorongs`,
-  WEBGIS: `${API_BASE_URL}/api/public/webgis`,
-  PROJECTS: `${API_BASE_URL}/api/public/projects`,
-  PROJECT_DETAIL: (id: number) => `${API_BASE_URL}/api/public/projects/${id}`,
-  FACILITIES: `${API_BASE_URL}/api/public/facilities`,
-  FACILITIES_CATEGORIES: `${API_BASE_URL}/api/public/facilities/categories`,
-  FACILITY_DETAIL: (id: number) => `${API_BASE_URL}/api/public/facilities/${id}`,
-  UMKM_DIRECTORY: `${API_BASE_URL}/api/public/umkm-directory`,
-  UMKM_CATEGORIES: `${API_BASE_URL}/api/public/umkm-categories`,
-  UMKM_SUBMIT: `${API_BASE_URL}/api/public/umkm/submit`,
-  UMKM_STATUS: (id: string) => `${API_BASE_URL}/api/public/umkm/status/${id}`,
-  LOCATION_INFO: `${API_BASE_URL}/api/public/location-info`,
-  KEUANGAN: `${API_BASE_URL}/api/public/keuangan-nagari`,
+  get DATA_OVERVIEW() { return `${getApiBaseUrl()}/api/public/data-overview`; },
+  get NAGARI_PROFILE() { return `${getApiBaseUrl()}/api/public/nagari-profile`; },
+  get NAGARI_STATS() { return `${getApiBaseUrl()}/api/public/nagari-stats`; },
+  get JORONGS() { return `${getApiBaseUrl()}/api/public/jorongs`; },
+  get WEBGIS() { return `${getApiBaseUrl()}/api/public/webgis`; },
+  get PROJECTS() { return `${getApiBaseUrl()}/api/public/projects`; },
+  PROJECT_DETAIL: (id: number) => `${getApiBaseUrl()}/api/public/projects/${id}`,
+  get FACILITIES() { return `${getApiBaseUrl()}/api/public/facilities`; },
+  get FACILITIES_CATEGORIES() { return `${getApiBaseUrl()}/api/public/facilities/categories`; },
+  FACILITY_DETAIL: (id: number) => `${getApiBaseUrl()}/api/public/facilities/${id}`,
+  get UMKM_DIRECTORY() { return `${getApiBaseUrl()}/api/public/umkm-directory`; },
+  get UMKM_CATEGORIES() { return `${getApiBaseUrl()}/api/public/umkm-categories`; },
+  get UMKM_SUBMIT() { return `${getApiBaseUrl()}/api/public/umkm/submit`; },
+  UMKM_STATUS: (id: string) => `${getApiBaseUrl()}/api/public/umkm/status/${id}`,
+  get LOCATION_INFO() { return `${getApiBaseUrl()}/api/public/location-info`; },
+  get KEUANGAN() { return `${getApiBaseUrl()}/api/public/keuangan-nagari`; },
+  get VISITOR_STATS() { return `${getApiBaseUrl()}/api/public/visitor-stats`; },
+  VERIFY_SURAT: (token: string) => `${getApiBaseUrl()}/api/public/verifikasi-surat/${encodeURIComponent(token)}`,
+  get SURVEY_SUMMARY() { return `${getApiBaseUrl()}/api/public/survey/summary`; },
+  get SURVEY_SUBMIT() { return `${getApiBaseUrl()}/api/public/survey`; },
+  get INDEKS_DESA() { return `${getApiBaseUrl()}/api/public/indeks-desa`; },
 };
 
 // Pelayanan & Pengaduan API Endpoints
 export const PELAYANAN_API = {
-  SUBMIT: `${API_BASE_URL}/api/public/pelayanan`,
-  TRACK: (trackingCode: string) => `${API_BASE_URL}/api/public/pelayanan/track/${trackingCode}`,
-  COMPLAINTS_SUBMIT: `${API_BASE_URL}/api/public/complaints`,
-  COMPLAINTS_TRACK: (id: string) => `${API_BASE_URL}/api/public/complaints/track/${id}`,
-  COMPLAINTS_CATEGORIES: `${API_BASE_URL}/api/public/complaints/categories`,
-  COMPLAINTS_STATS: `${API_BASE_URL}/api/public/complaints/stats`,
-  COMPLAINTS_RECENT: `${API_BASE_URL}/api/public/complaints/recent`,
+  get SUBMIT() { return `${getApiBaseUrl()}/api/public/pelayanan`; },
+  TRACK: (trackingCode: string) => `${getApiBaseUrl()}/api/public/pelayanan/track/${trackingCode}`,
+  get COMPLAINTS_SUBMIT() { return `${getApiBaseUrl()}/api/public/complaints`; },
+  COMPLAINTS_TRACK: (id: string) => `${getApiBaseUrl()}/api/public/complaints/track/${id}`,
+  get COMPLAINTS_CATEGORIES() { return `${getApiBaseUrl()}/api/public/complaints/categories`; },
+  get COMPLAINTS_STATS() { return `${getApiBaseUrl()}/api/public/complaints/stats`; },
+  get COMPLAINTS_RECENT() { return `${getApiBaseUrl()}/api/public/complaints/recent`; },
 };
+
+

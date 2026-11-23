@@ -1,373 +1,558 @@
-import { motion } from "framer-motion";
-import { useState } from "react";
+import { useMemo } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import {
-    Map, Navigation, Ruler, Mountain, Users, Building2, GraduationCap, HeartPulse, Store, ChevronRight
+  Map as MapIcon,
+  Mountain,
+  Ruler,
+  Users,
+  Building2,
+  Loader2,
+  ChevronRight,
+  MapPin,
+  UserCheck,
+  Compass,
 } from "lucide-react";
+import { Link } from "wouter";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
-    Card, CardContent, CardTitle
-} from "@/components/ui/card";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
-import { useDataOverview } from "@/lib/api";
+import {
+  useDataOverview,
+  useNagariProfile,
+  useSiteSettings,
+  useFacilities,
+  useJorongs,
+} from "@/lib/api";
+import { getTenantName } from "@/lib/tenant-name";
+import { accentByIndex } from "@/lib/accents";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import PageBackground from "@/components/layout/PageBackground";
 import PageHeader from "@/components/layout/PageHeader";
+import mapImage from "@assets/generated_images/digital_map_of_village.png";
+
+const EASE_ENTER: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 export default function Monografi() {
-    const { data: overviewResponse } = useDataOverview();
-    const [expandedCard, setExpandedCard] = useState<string | null>(null);
+  const prefersReducedMotion = Boolean(useReducedMotion());
+  const { data: overviewResponse, isLoading: loadingOverview } = useDataOverview();
+  const { data: profileResponse, isLoading: loadingProfile } = useNagariProfile();
+  const { data: settingsResponse } = useSiteSettings();
+  const { data: facilitiesResponse } = useFacilities();
+  const { data: jorongsResponse, isLoading: loadingJorongs } = useJorongs();
 
-    const overview = overviewResponse?.data;
+  const overview = overviewResponse?.data;
+  const profile = profileResponse?.data;
+  const tenantName = getTenantName(settingsResponse?.data, profile?.nama_nagari);
+  const facilities = facilitiesResponse?.data?.data || [];
+  const jorongs = jorongsResponse?.data || [];
 
-    const containerVariants = {
-        hidden: { opacity: 0 },
-        visible: {
-            opacity: 1,
-            transition: { staggerChildren: 0.1, delayChildren: 0.2 }
-        }
-    };
+  const isLoading = loadingOverview || loadingProfile || loadingJorongs;
 
-    const itemVariants = {
-        hidden: { opacity: 0, y: 20 },
-        visible: { opacity: 1, y: 0 }
-    };
+  const totalPenduduk = Number(overview?.jumlah_penduduk || 0);
+  const lakiLaki = Number(overview?.jumlah_laki_laki || 0);
+  const perempuan = Number(overview?.jumlah_perempuan || 0);
+  const genderBase = lakiLaki + perempuan || totalPenduduk;
+  const malePct =
+    genderBase > 0 ? Number(((lakiLaki / genderBase) * 100).toFixed(1)) : 0;
+  const femalePct =
+    genderBase > 0 ? Number(((perempuan / genderBase) * 100).toFixed(1)) : 0;
 
-    // Data Kependudukan
-    const populationData = [
-        { label: "Jumlah Penduduk", value: overview?.jumlah_penduduk || "-", unit: "Jiwa" },
-        { label: "Laki-laki", value: overview?.jumlah_laki_laki || "-", unit: "Jiwa" },
-        { label: "Perempuan", value: overview?.jumlah_perempuan || "-", unit: "Jiwa" },
-        { label: "Jumlah Kepala Keluarga", value: overview?.jumlah_kk || "-", unit: "KK" },
-    ];
+  const generalData = [
+    { label: "Nama Nagari", value: tenantName },
+    { label: "Kode Wilayah", value: profile?.kode_nagari },
+    { label: "Kecamatan", value: profile?.kecamatan },
+    { label: "Kabupaten", value: profile?.kabupaten },
+    { label: "Provinsi", value: profile?.provinsi || "Sumatera Barat" },
+    { label: "Kode Pos", value: profile?.kode_pos },
+  ].filter((item) => Boolean(item.value));
 
-    // Data Statis
-    const generalData = [
-        { label: "Nama Nagari", value: "MUARO" },
-        { label: "Kode Wilayah", value: "0110" },
-        { label: "Kode Pos", value: "27513" },
-        { label: "Kecamatan", value: "SIJUNJUNG" },
-        { label: "Kabupaten", value: "SIJUNJUNG" },
-        { label: "Provinsi", value: "SUMATERA BARAT" },
-    ];
+  const boundariesData = [
+    { direction: "Utara", value: profile?.batas_wilayah?.utara },
+    { direction: "Timur", value: profile?.batas_wilayah?.timur },
+    { direction: "Selatan", value: profile?.batas_wilayah?.selatan },
+    { direction: "Barat", value: profile?.batas_wilayah?.barat },
+  ];
+  const hasAnyBoundary = boundariesData.some((b) => Boolean(b.value));
 
-    const typologyData = [
-        { label: "Tipologi", value: "Perladangan & Jasa" },
-        { label: "Perkembangan", value: "Swasembada" },
-        { label: "Luas Wilayah", value: "5.749 Ha" },
-    ];
+  const facilitiesByCategory = useMemo(() => {
+    const grouped = new Map<string, number>();
+    for (const item of facilities) {
+      const key = (item.jenis || item.category || "Fasilitas Umum").trim();
+      grouped.set(key, (grouped.get(key) || 0) + 1);
+    }
+    return Array.from(grouped.entries()).map(([category, count]) => ({
+      category,
+      count,
+    }));
+  }, [facilities]);
 
-    const boundariesData = [
-        { direction: "Utara", value: "Nagari Silokek" },
-        { direction: "Selatan", value: "Nagari Sijunjung" },
-        { direction: "Barat", value: "Nagari Padang Laweh" },
-        { direction: "Timur", value: "Nagari Aie Angek" },
-    ];
+  const jorongCount =
+    jorongs.length || overview?.jumlah_jorong || profile?.jumlah_jorong || 0;
 
-    const orbitrationData = [
-        { label: "Jarak ke Kecamatan", value: "4 KM" },
-        { label: "Jarak ke Kabupaten", value: "0 KM" },
-        { label: "Jarak ke Provinsi", value: "100 KM" },
-    ];
-
-    const infrastructureData = {
-        health: [
-            { name: "Puskesmas", value: "1", avail: "Ada" },
-            { name: "Pustu", value: "1", avail: "Ada" },
-            { name: "Poskesri", value: "2", avail: "Ada" },
-            { name: "Posyandu", value: "18", avail: "Ada" },
-        ],
-        education: [
-            { name: "PAUD", value: "11", avail: "Ada" },
-            { name: "TK", value: "3", avail: "Ada" },
-            { name: "SD", value: "9", avail: "Ada" },
-            { name: "SMP", value: "2", avail: "Ada" },
-            { name: "SMA/SMK", value: "6", avail: "Ada" },
-            { name: "Perguruan Tinggi", value: "2", avail: "Ada" },
-        ],
-        worship: [
-            { name: "Masjid", value: "8", avail: "Ada" },
-            { name: "Mushala", value: "31", avail: "Ada" },
-        ],
-        public: [
-            { name: "Olahraga", value: "8", avail: "Ada" },
-            { name: "Kesenian", value: "4", avail: "Ada" },
-            { name: "Balai Adat", value: "1", avail: "Ada" },
-            { name: "Pasar", value: "2", avail: "Ada" },
-        ]
-    };
-
+  if (isLoading) {
     return (
-        <PageBackground>
-            <Navbar />
-            <PageHeader
-                title="Monografi Nagari"
-                description="Data dan profil lengkap wilayah dengan informasi geografi, demografi, dan infrastruktur pendukung."
-                image="https://images.unsplash.com/photo-1542281286-9e0a16bb7366?auto=format&fit=crop&q=80&w=2000"
-            />
-
-            <div className="container mx-auto px-4 py-16 md:py-24 space-y-24">
-                
-                {/* Section 1: Identitas & Geografi */}
-                <motion.div
-                    className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={{ once: true }}
-                    variants={containerVariants}
-                >
-                    {/* Identitas Card */}
-                    <motion.div variants={itemVariants} className="h-full">
-                        <Card className="shadow-2xl shadow-black/40 border border-black/5 dark:border-white/10 overflow-hidden h-full bg-white/80 dark:bg-[#0b2023]/60 backdrop-blur-xl group hover:border-teal-300 dark:border-[#3fd5ba]/30 transition-colors duration-500">
-                            <motion.div
-                                className="bg-white/[0.03] py-5 px-6 border-b border-black/5 dark:border-white/5 flex items-center gap-4 relative overflow-hidden"
-                            >
-                                <div className="absolute top-0 left-0 w-1 h-full bg-teal-500 dark:bg-[#3fd5ba] shadow-[0_0_10px_rgba(63,213,186,0.5)]" />
-                                <div className="w-10 h-10 rounded-xl bg-white/[0.05] border border-black/5 dark:border-white/10 flex items-center justify-center text-teal-600 dark:text-[#3fd5ba] shadow-inner">
-                                    <Map size={20} />
-                                </div>
-                                <CardTitle className="text-lg text-slate-800 dark:text-white font-serif tracking-wide">Identitas Wilayah</CardTitle>
-                            </motion.div>
-                            <CardContent className="p-0">
-                                <Table>
-                                    <TableBody>
-                                        {generalData.map((item, idx) => (
-                                            <TableRow key={idx} className="border-b border-black/5 dark:border-white/5 hover:bg-white/[0.02] transition-colors group/row">
-                                                <TableCell className="text-slate-600 dark:text-white/60 font-light py-4 px-6 text-sm">{item.label}</TableCell>
-                                                <TableCell className="text-right font-bold text-slate-800 dark:text-white py-4 px-6 group-hover/row:text-teal-600 dark:text-[#3fd5ba] transition-colors">{item.value}</TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-
-                    {/* Tipologi & Batas */}
-                    <motion.div className="space-y-6" variants={containerVariants}>
-                        {/* Tipologi Card */}
-                        <motion.div variants={itemVariants} className="h-[calc(50%-12px)]">
-                            <Card className="shadow-2xl shadow-black/40 border border-black/5 dark:border-white/10 overflow-hidden h-full bg-white/80 dark:bg-[#0b2023]/60 backdrop-blur-xl group hover:border-teal-300 dark:border-[#3fd5ba]/30 transition-colors duration-500">
-                                <div className="bg-white/[0.03] py-4 px-6 border-b border-black/5 dark:border-white/5 flex items-center gap-4 relative">
-                                    <div className="absolute top-0 left-0 w-1 h-full bg-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.5)]" />
-                                    <Mountain size={18} className="text-blue-400" />
-                                    <CardTitle className="text-base text-slate-800 dark:text-white font-serif">Tipologi & Luas</CardTitle>
-                                </div>
-                                <CardContent className="pt-5 px-6 pb-6 space-y-4">
-                                    {typologyData.map((item, idx) => (
-                                        <div key={idx} className="flex justify-between items-center pb-3 border-b border-black/5 dark:border-white/5 last:border-0 last:pb-0">
-                                            <span className="text-sm font-light text-slate-600 dark:text-white/60">{item.label}</span>
-                                            <span className="font-bold text-slate-800 dark:text-white text-sm bg-white/[0.05] px-3 py-1 rounded-lg border border-black/5 dark:border-white/10">
-                                                {item.value}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </CardContent>
-                            </Card>
-                        </motion.div>
-
-                        {/* Batas Wilayah Card */}
-                        <motion.div variants={itemVariants} className="h-[calc(50%-12px)]">
-                            <Card className="shadow-2xl shadow-black/40 border border-black/5 dark:border-white/10 overflow-hidden h-full bg-white/80 dark:bg-[#0b2023]/60 backdrop-blur-xl group hover:border-teal-300 dark:border-[#3fd5ba]/30 transition-colors duration-500">
-                                <div className="bg-white/[0.03] py-4 px-6 border-b border-black/5 dark:border-white/5 flex items-center gap-4 relative">
-                                    <div className="absolute top-0 left-0 w-1 h-full bg-purple-400 shadow-[0_0_10px_rgba(192,132,252,0.5)]" />
-                                    <Ruler size={18} className="text-purple-400" />
-                                    <CardTitle className="text-base text-slate-800 dark:text-white font-serif">Batas Wilayah</CardTitle>
-                                </div>
-                                <CardContent className="pt-5 px-6 pb-6 space-y-3">
-                                    {boundariesData.map((item, idx) => (
-                                        <div key={idx} className="flex justify-between items-center py-2 px-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
-                                            <span className="text-xs font-bold text-slate-600 dark:text-white/40 uppercase tracking-widest w-20">{item.direction}</span>
-                                            <span className="font-bold text-slate-600 dark:text-white/90 text-right text-sm">
-                                                {item.value}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </CardContent>
-                            </Card>
-                        </motion.div>
-                    </motion.div>
-
-                    {/* Orbitrasi Card */}
-                    <motion.div variants={itemVariants} className="h-full">
-                        <Card className="shadow-2xl shadow-black/40 border border-black/5 dark:border-white/10 overflow-hidden h-full bg-white/80 dark:bg-[#0b2023]/60 backdrop-blur-xl group hover:border-teal-300 dark:border-[#3fd5ba]/30 transition-colors duration-500">
-                            <div className="bg-white/[0.03] py-5 px-6 border-b border-black/5 dark:border-white/5 flex items-center gap-4 relative">
-                                <div className="absolute top-0 left-0 w-1 h-full bg-orange-400 shadow-[0_0_10px_rgba(251,146,60,0.5)]" />
-                                <div className="w-10 h-10 rounded-xl bg-white/[0.05] border border-black/5 dark:border-white/10 flex items-center justify-center text-orange-400 shadow-inner">
-                                    <Navigation size={20} />
-                                </div>
-                                <CardTitle className="text-lg text-slate-800 dark:text-white font-serif tracking-wide">Orbitrasi</CardTitle>
-                            </div>
-                            <CardContent className="pt-6 px-6 pb-6 space-y-4">
-                                {orbitrationData.map((item, idx) => (
-                                    <div key={idx} className="bg-gradient-to-r from-white/[0.05] to-transparent border border-white/[0.05] rounded-xl p-4 flex justify-between items-center hover:border-orange-400/30 hover:bg-white/[0.08] transition-all">
-                                        <span className="text-sm font-light text-slate-600 dark:text-white/70">{item.label}</span>
-                                        <span className="font-bold text-orange-400 text-sm">{item.value}</span>
-                                    </div>
-                                ))}
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-                </motion.div>
-
-                {/* Section 2: Kependudukan (Full Width) */}
-                <motion.div
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={{ once: true }}
-                    variants={containerVariants}
-                >
-                    <Card className="shadow-2xl shadow-black/50 border border-black/5 dark:border-white/10 overflow-hidden bg-[#0A1A1C]">
-                        <motion.div
-                            className="bg-gradient-to-r from-[#123136] to-transparent border-b border-black/5 dark:border-white/10 text-slate-800 dark:text-white p-8 lg:p-10 relative overflow-hidden"
-                            variants={itemVariants}
-                        >
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-teal-600/10 dark:bg-[#3fd5ba]/10 rounded-full blur-[80px]" />
-                            <div className="flex items-center gap-6 relative z-10">
-                                <div className="p-4 bg-white/[0.05] border border-black/5 dark:border-white/10 rounded-2xl shadow-inner text-teal-600 dark:text-[#3fd5ba]">
-                                    <Users size={32} />
-                                </div>
-                                <div>
-                                    <h3 className="text-3xl font-serif font-bold tracking-tight mb-2">Data Kependudukan</h3>
-                                    <p className="text-teal-600/80 dark:text-[#3fd5ba]/80 text-sm font-bold uppercase tracking-widest">Statistik penduduk tahun berjalan</p>
-                                </div>
-                            </div>
-                        </motion.div>
-                        <CardContent className="p-0">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow className="border-b border-black/5 dark:border-white/10 hover:bg-transparent">
-                                        <TableHead className="w-[40%] text-slate-600 dark:text-white/50 font-bold text-[11px] uppercase tracking-[0.2em] py-5 px-8">Kategori</TableHead>
-                                        <TableHead className="text-center text-slate-600 dark:text-white/50 font-bold text-[11px] uppercase tracking-[0.2em] py-5">Jumlah</TableHead>
-                                        <TableHead className="text-center text-slate-600 dark:text-white/50 font-bold text-[11px] uppercase tracking-[0.2em] py-5">Satuan</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {populationData.map((item, idx) => (
-                                        <TableRow key={idx} className="border-b border-black/5 dark:border-white/5 hover:bg-white/[0.02] transition-colors">
-                                            <TableCell className="font-light text-slate-600 dark:text-white/90 py-5 px-8 text-base">{item.label}</TableCell>
-                                            <TableCell className="text-center font-serif font-bold text-2xl text-teal-600 dark:text-[#3fd5ba] py-5">{item.value}</TableCell>
-                                            <TableCell className="text-center text-slate-600 dark:text-white/40 font-bold text-xs uppercase tracking-widest py-5">{item.unit}</TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                </motion.div>
-
-                {/* Section 3: Sarana Prasarana (Grid) */}
-                <motion.div
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={{ once: true }}
-                    variants={containerVariants}
-                >
-                    <div className="mb-12">
-                        <div className="inline-flex items-center gap-2 text-teal-600 dark:text-[#3fd5ba] font-bold uppercase tracking-[0.2em] text-[10px] mb-4 border border-teal-300 dark:border-[#3fd5ba]/20 bg-teal-600/5 dark:bg-[#3fd5ba]/5 px-4 py-1.5 rounded-full">
-                            <Building2 size={14} />
-                            <span>Infrastruktur</span>
-                        </div>
-                        <h3 className="text-3xl md:text-5xl font-serif font-bold text-slate-800 dark:text-white tracking-tight">
-                            Sarana & Prasarana
-                        </h3>
-                    </div>
-                    
-                    <motion.div
-                        className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6"
-                        variants={containerVariants}
-                    >
-                        <InfraCard
-                            title="Kesehatan"
-                            icon={HeartPulse}
-                            data={infrastructureData.health}
-                            color="text-red-400"
-                            shadowGlow="shadow-[0_0_15px_rgba(248,113,113,0.15)]"
-                        />
-                        <InfraCard
-                            title="Pendidikan"
-                            icon={GraduationCap}
-                            data={infrastructureData.education}
-                            color="text-blue-400"
-                            shadowGlow="shadow-[0_0_15px_rgba(96,165,250,0.15)]"
-                        />
-                        <InfraCard
-                            title="Ibadah"
-                            icon={Building2}
-                            data={infrastructureData.worship}
-                            color="text-emerald-400"
-                            shadowGlow="shadow-[0_0_15px_rgba(52,211,153,0.15)]"
-                        />
-                        <InfraCard
-                            title="Umum & Pasar"
-                            icon={Store}
-                            data={infrastructureData.public}
-                            color="text-orange-400"
-                            shadowGlow="shadow-[0_0_15px_rgba(251,146,60,0.15)]"
-                        />
-                    </motion.div>
-                </motion.div>
-
-            </div>
-            <Footer />
-        </PageBackground>
+      <PageBackground>
+        <Navbar />
+        <div className="flex items-center justify-center py-32 gap-3 min-h-[60vh]">
+          <Loader2 aria-hidden="true" className="w-7 h-7 text-nagari-red animate-spin" />
+          <span className="text-sm font-medium text-muted-foreground">
+            Memuat data monografi...
+          </span>
+        </div>
+        <Footer />
+      </PageBackground>
     );
+  }
+
+  return (
+    <PageBackground>
+      <Navbar />
+      <PageHeader
+        title="Monografi Nagari"
+        description="Lembar profil administratif, kondisi geografis, daftar wilayah jorong, dan ringkasan kependudukan resmi nagari."
+        image={mapImage}
+      />
+
+      <div className="container mx-auto px-4 md:px-6 py-12 md:py-16 space-y-12">
+        {/* Top Geographic & Population Bento */}
+        <section
+          aria-label="Ringkasan geografis dan kependudukan"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
+        >
+          <Card className="bg-nagari-navy text-white border border-border rounded-2xl">
+            <CardContent className="p-6 flex flex-col justify-between gap-4 h-full">
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] font-medium text-nagari-yellow">
+                  Luas Wilayah
+                </span>
+                <Mountain aria-hidden="true" size={18} className="text-nagari-yellow" />
+              </div>
+              <div>
+                <p className="text-3xl font-serif font-bold tabular-nums">
+                  {profile?.luas_wilayah || overview?.luas_wilayah || "—"}
+                  {(profile?.luas_wilayah || overview?.luas_wilayah) && (
+                    <span className="text-sm font-sans font-medium text-white/75 ml-1.5">
+                      km²
+                    </span>
+                  )}
+                </p>
+                {profile?.ketinggian != null && (
+                  <p className="text-[13px] text-white/75 mt-1 tabular-nums">
+                    Ketinggian {profile.ketinggian} mdpl
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <SummaryMetric
+            label="Wilayah Administratif"
+            value={jorongCount > 0 ? String(jorongCount) : "—"}
+            unit={jorongCount > 0 ? "Jorong" : undefined}
+            sub={profile?.kecamatan ? `Kec. ${profile.kecamatan}` : undefined}
+            icon={Compass}
+            accentIndex={0}
+          />
+          <SummaryMetric
+            label="Jumlah Penduduk"
+            value={totalPenduduk > 0 ? totalPenduduk.toLocaleString("id-ID") : "—"}
+            unit={totalPenduduk > 0 ? "Jiwa" : undefined}
+            sub={
+              overview?.jumlah_kk
+                ? `${Number(overview.jumlah_kk).toLocaleString("id-ID")} Kepala Keluarga`
+                : undefined
+            }
+            icon={Users}
+            accentIndex={1}
+          />
+          <SummaryMetric
+            label="UMKM & Layanan Aktif"
+            value={String(overview?.total_umkm ?? 0)}
+            unit="UMKM"
+            sub={`${overview?.total_layanan ?? 0} jenis layanan publik`}
+            icon={Building2}
+            accentIndex={2}
+          />
+        </section>
+
+        {/* Identitas Wilayah & Kependudukan */}
+        <section className="grid lg:grid-cols-12 gap-6">
+          {/* Identitas & Batas Wilayah */}
+          <Card className="lg:col-span-5 bg-card border border-border rounded-2xl overflow-hidden flex flex-col">
+            <div className="bg-muted/50 px-6 py-4 border-b border-border flex items-center gap-3">
+              <span className="w-9 h-9 rounded-lg bg-nagari-red/10 text-nagari-red-ink flex items-center justify-center">
+                <MapIcon aria-hidden="true" size={18} />
+              </span>
+              <CardTitle className="text-lg font-serif text-foreground">
+                Identitas Wilayah
+              </CardTitle>
+            </div>
+            <CardContent className="p-0 flex-1 flex flex-col justify-between">
+              <Table>
+                <TableBody>
+                  {generalData.map((item) => (
+                    <TableRow
+                      key={item.label}
+                      className="border-b border-border last:border-0"
+                    >
+                      <TableCell className="text-muted-foreground py-3.5 px-6 text-sm">
+                        {item.label}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold text-foreground py-3.5 px-6 text-sm">
+                        {item.value}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {hasAnyBoundary && (
+                <div className="p-6 pt-4 border-t border-border bg-muted/25 space-y-2.5">
+                  <p className="text-[13px] font-semibold text-foreground flex items-center gap-2">
+                    <Ruler aria-hidden="true" size={14} className="text-nagari-red-ink" />
+                    Batas Wilayah
+                  </p>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {boundariesData.map((b) => (
+                      <div
+                        key={b.direction}
+                        className="p-2.5 rounded-lg bg-card border border-border"
+                      >
+                        <p className="text-[13px] text-muted-foreground">
+                          {b.direction}
+                        </p>
+                        <p className="text-sm font-semibold text-foreground truncate">
+                          {b.value || "Belum dicatat"}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Ringkasan Kependudukan */}
+          <Card className="lg:col-span-7 bg-card border border-border rounded-2xl overflow-hidden flex flex-col">
+            <div className="bg-muted/50 px-6 py-4 border-b border-border flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className="w-9 h-9 rounded-lg bg-cat-2/10 text-cat-2 flex items-center justify-center">
+                  <Users aria-hidden="true" size={18} />
+                </span>
+                <CardTitle className="text-lg font-serif text-foreground">
+                  Ringkasan Kependudukan
+                </CardTitle>
+              </div>
+              <Link href="/data-publik" className="group">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-nagari-red-ink hover:bg-nagari-red/10 h-9 px-3 rounded-lg text-[13px] font-medium"
+                >
+                  Statistik Lengkap
+                  <ChevronRight
+                    aria-hidden="true"
+                    size={15}
+                    className="ml-1 transition-transform duration-150 group-hover:translate-x-[3px]"
+                  />
+                </Button>
+              </Link>
+            </div>
+
+            <CardContent className="p-6 flex-1 flex flex-col justify-between gap-6">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="p-4 rounded-xl bg-muted/40 border border-border">
+                  <p className="text-[13px] font-medium text-muted-foreground mb-1">
+                    Total Penduduk Aktif
+                  </p>
+                  <p className="text-2xl md:text-3xl font-serif font-bold text-foreground tabular-nums">
+                    {totalPenduduk > 0 ? totalPenduduk.toLocaleString("id-ID") : "—"}
+                    {totalPenduduk > 0 && (
+                      <span className="text-sm font-sans font-medium text-muted-foreground ml-1.5">
+                        Jiwa
+                      </span>
+                    )}
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-muted/40 border border-border">
+                  <p className="text-[13px] font-medium text-muted-foreground mb-1">
+                    Jumlah Kepala Keluarga
+                  </p>
+                  <p className="text-2xl md:text-3xl font-serif font-bold text-foreground tabular-nums">
+                    {overview?.jumlah_kk
+                      ? Number(overview.jumlah_kk).toLocaleString("id-ID")
+                      : "—"}
+                    {overview?.jumlah_kk ? (
+                      <span className="text-sm font-sans font-medium text-muted-foreground ml-1.5">
+                        KK
+                      </span>
+                    ) : null}
+                  </p>
+                </div>
+              </div>
+
+              {genderBase > 0 && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="font-medium text-foreground">Laki-laki</span>
+                      <span className="font-semibold text-foreground tabular-nums">
+                        {lakiLaki.toLocaleString("id-ID")} jiwa ({malePct}%)
+                      </span>
+                    </div>
+                    <div className="h-2.5 w-full bg-muted rounded-full overflow-hidden">
+                      <motion.div
+                        initial={prefersReducedMotion ? false : { scaleX: 0 }}
+                        animate={{ scaleX: 1 }}
+                        transition={{ duration: 0.5, ease: EASE_ENTER }}
+                        style={{
+                          width: `${malePct}%`,
+                          transformOrigin: "left center",
+                        }}
+                        className="h-full rounded-full bg-cat-2"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="font-medium text-foreground">Perempuan</span>
+                      <span className="font-semibold text-foreground tabular-nums">
+                        {perempuan.toLocaleString("id-ID")} jiwa ({femalePct}%)
+                      </span>
+                    </div>
+                    <div className="h-2.5 w-full bg-muted rounded-full overflow-hidden">
+                      <motion.div
+                        initial={prefersReducedMotion ? false : { scaleX: 0 }}
+                        animate={{ scaleX: 1 }}
+                        transition={{ duration: 0.5, delay: 0.08, ease: EASE_ENTER }}
+                        style={{
+                          width: `${femalePct}%`,
+                          transformOrigin: "left center",
+                        }}
+                        className="h-full rounded-full bg-cat-1"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-4 border-t border-border flex flex-wrap items-center justify-between gap-3">
+                <p className="text-[13px] text-muted-foreground">
+                  Ingin melihat persebaran wilayah secara spasial?
+                </p>
+                <Link href="/gis" className="group">
+                  <Button
+                    variant="outline"
+                    className="rounded-lg h-10 px-4 text-sm font-medium border-border"
+                  >
+                    Buka Peta Digital
+                    <ChevronRight
+                      aria-hidden="true"
+                      size={15}
+                      className="ml-1.5 transition-transform duration-150 group-hover:translate-x-[3px]"
+                    />
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Daftar Wilayah Administratif (Jorong) */}
+        <section className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-5 border-b border-border">
+            <div>
+              <h2 className="text-2xl md:text-3xl font-serif font-bold text-foreground">
+                Daftar Wilayah Jorong
+              </h2>
+              <p className="text-muted-foreground text-sm md:text-base mt-1">
+                Pembagian wilayah administratif beserta Kepala / Wali Jorong di {tenantName}.
+              </p>
+            </div>
+            <span className="text-[13px] font-semibold px-3 py-1.5 rounded-lg bg-muted text-foreground border border-border self-start sm:self-auto tabular-nums">
+              {jorongs.length} Jorong Aktif
+            </span>
+          </div>
+
+          {jorongs.length === 0 ? (
+            <Card className="bg-card border border-border rounded-2xl p-10 text-center">
+              <MapPin aria-hidden="true" className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
+              <p className="text-muted-foreground text-base">
+                Daftar wilayah jorong belum dipublikasikan untuk nagari ini.
+              </p>
+            </Card>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {jorongs.map((jorong, idx) => {
+                const accent = accentByIndex(idx);
+                return (
+                  <Card
+                    key={jorong.id}
+                    className="bg-card border border-border rounded-2xl overflow-hidden flex flex-col"
+                  >
+                    <div aria-hidden="true" className={`h-1 w-full ${accent.edge}`} />
+                    <CardContent className="p-5 flex-1 flex flex-col justify-between gap-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          {jorong.kode && (
+                            <p className="text-[13px] font-medium text-muted-foreground mb-0.5 tabular-nums">
+                              {jorong.kode}
+                            </p>
+                          )}
+                          <h3 className="font-serif font-bold text-lg text-foreground leading-snug">
+                            Jorong {jorong.nama}
+                          </h3>
+                        </div>
+                        <span
+                          className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${accent.chip}`}
+                        >
+                          <MapPin aria-hidden="true" size={17} />
+                        </span>
+                      </div>
+
+                      <div className="pt-3 border-t border-border space-y-1.5 text-[13px]">
+                        <div className="flex items-center gap-2 text-foreground">
+                          <UserCheck
+                            aria-hidden="true"
+                            size={15}
+                            className="text-muted-foreground shrink-0"
+                          />
+                          <span className="text-muted-foreground">Wali Jorong:</span>
+                          <span className="font-semibold truncate">
+                            {jorong.kepala_jorong || "Belum dicatat"}
+                          </span>
+                        </div>
+                        {jorong.luas_wilayah && (
+                          <p className="text-muted-foreground tabular-nums pl-6">
+                            Luas wilayah: {jorong.luas_wilayah}
+                          </p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* Sarana & Prasarana (ditampilkan jika tersedia dari API fasilitas) */}
+        {facilitiesByCategory.length > 0 && (
+          <section className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-5 border-b border-border">
+              <div>
+                <h2 className="text-2xl md:text-3xl font-serif font-bold text-foreground">
+                  Sarana &amp; Prasarana Tercatat
+                </h2>
+                <p className="text-muted-foreground text-sm md:text-base mt-1">
+                  Rekapitulasi fasilitas publik yang terdaftar di basis data {tenantName}.
+                </p>
+              </div>
+              <Link href="/fasilitas" className="group">
+                <Button
+                  variant="outline"
+                  className="rounded-lg h-11 px-4 text-sm font-medium border-border"
+                >
+                  Lihat Daftar Fasilitas
+                  <ChevronRight
+                    aria-hidden="true"
+                    size={16}
+                    className="ml-1.5 transition-transform duration-150 group-hover:translate-x-[3px]"
+                  />
+                </Button>
+              </Link>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {facilitiesByCategory.map((item, idx) => {
+                const accent = accentByIndex(idx);
+                return (
+                  <Card
+                    key={item.category}
+                    className="bg-card border border-border rounded-2xl overflow-hidden"
+                  >
+                    <div aria-hidden="true" className={`h-1 w-full ${accent.edge}`} />
+                    <CardContent className="p-6 flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-[13px] font-medium text-muted-foreground mb-1">
+                          {item.category}
+                        </p>
+                        <p className="text-2xl font-serif font-bold text-foreground tabular-nums">
+                          {item.count}
+                        </p>
+                      </div>
+                      <span
+                        className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${accent.chip}`}
+                      >
+                        <Building2 aria-hidden="true" size={20} />
+                      </span>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </section>
+        )}
+      </div>
+      <Footer />
+    </PageBackground>
+  );
 }
 
-function InfraCard({ title, icon: Icon, data, color, shadowGlow }: any) {
-    const [isExpanded, setIsExpanded] = useState(false);
-
-    return (
-        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}>
-            <Card className={`border border-black/5 dark:border-white/10 bg-white/80 dark:bg-[#0b2023]/60 backdrop-blur-md overflow-hidden h-full hover:border-black/5 dark:border-white/20 transition-all duration-300 ${shadowGlow}`}>
-                <div className="bg-white/[0.03] py-5 px-6 border-b border-white/[0.05]">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className={`p-2.5 rounded-xl bg-white/[0.05] border border-black/5 dark:border-white/10 ${color}`}>
-                                <Icon size={20} />
-                            </div>
-                            <h4 className={`font-serif font-bold text-lg text-slate-800 dark:text-white`}>{title}</h4>
-                        </div>
-                        <button
-                            onClick={() => setIsExpanded(!isExpanded)}
-                            className="p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-slate-600 dark:text-white/50 hover:text-slate-800 dark:text-white transition-colors border border-black/5 dark:border-white/10"
-                        >
-                            <ChevronRight size={16} className={`transition-transform duration-300 ${isExpanded ? 'rotate-90' : ''}`} />
-                        </button>
-                    </div>
-                </div>
-                <CardContent className="p-0">
-                    <ul className="divide-y divide-white/[0.05]">
-                        {data.map((item: any, idx: number) => (
-                            <li
-                                key={idx}
-                                className={`flex justify-between items-center p-4 text-sm group/item hover:bg-white/[0.03] transition-colors ${idx > 2 && !isExpanded ? 'hidden md:flex' : ''}`}
-                            >
-                                <span className="text-slate-600 dark:text-white/70 font-light group-hover/item:text-slate-800 dark:text-white transition-colors">{item.name}</span>
-                                <span className={`font-bold px-3 py-1 rounded-lg bg-white/[0.05] border border-black/5 dark:border-white/10 ${color}`}>
-                                    {item.value}
-                                </span>
-                            </li>
-                        ))}
-                    </ul>
-                </CardContent>
-                {data.length > 3 && (
-                    <div className="px-4 py-3 text-center border-t border-white/[0.05] bg-white/[0.01]">
-                        <button
-                            onClick={() => setIsExpanded(!isExpanded)}
-                            className="text-xs uppercase tracking-widest font-bold text-slate-600 dark:text-white/40 hover:text-slate-800 dark:text-white transition-colors md:hidden"
-                        >
-                            {isExpanded ? 'Sembunyikan' : `+${data.length - 3} Lagi`}
-                        </button>
-                    </div>
-                )}
-            </Card>
-        </motion.div>
-    );
+function SummaryMetric({
+  label,
+  value,
+  unit,
+  sub,
+  icon: Icon,
+  accentIndex,
+}: {
+  label: string;
+  value: string;
+  unit?: string;
+  sub?: string;
+  icon: React.ComponentType<{ size?: number; "aria-hidden"?: boolean }>;
+  accentIndex: number;
+}) {
+  const accent = accentByIndex(accentIndex);
+  return (
+    <Card className="bg-card border border-border rounded-2xl overflow-hidden flex flex-col">
+      <div aria-hidden="true" className={`h-1 w-full ${accent.edge}`} />
+      <CardContent className="p-6 flex-1 flex flex-col justify-between gap-4">
+        <span
+          className={`w-10 h-10 rounded-xl flex items-center justify-center ${accent.chip}`}
+        >
+          <Icon aria-hidden={true} size={20} />
+        </span>
+        <div>
+          <p className="text-[13px] font-medium text-muted-foreground mb-1">
+            {label}
+          </p>
+          <div className="flex items-baseline gap-1.5 flex-wrap">
+            <p className="text-3xl font-serif font-bold text-foreground tabular-nums leading-none">
+              {value}
+            </p>
+            {unit && (
+              <span className={`text-[13px] font-semibold ${accent.ink}`}>
+                {unit}
+              </span>
+            )}
+          </div>
+          {sub && (
+            <p className="text-[13px] text-muted-foreground mt-1.5">{sub}</p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
 }

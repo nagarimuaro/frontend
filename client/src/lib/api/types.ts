@@ -2,6 +2,9 @@
 
 // CMS API Types
 export interface SiteSettings {
+  tenant_name?: string;
+  nama_nagari?: string;
+  kabupaten?: string;
   contact_address: string;
   contact_email: string;
   contact_phone: string;
@@ -100,6 +103,9 @@ export interface Service {
   contact_info: string;
   sort_order: number;
   featured_image: string;
+  icon?: string | null;
+  form_url?: string | null;
+  requirements?: string[] | null;
 }
 
 export interface Staff {
@@ -171,12 +177,165 @@ export interface DataOverview {
   total_anggaran: number;
   total_pendapatan: number;
   total_belanja: number;
+  tahun_anggaran?: number | null;
   total_fasilitas: number;
   total_umkm: number;
   total_layanan: number;
   proyek_berjalan: number;
   proyek_selesai: number;
   tahun: number;
+}
+
+export interface NagariStatsAgeGroup {
+  label: string;
+  count: number;
+  value: number;
+}
+
+export interface NagariStatsCategoryItem {
+  name: string;
+  count: number;
+  value: number;
+}
+
+export interface NagariStats {
+  tahun: number;
+  jumlah_penduduk: number;
+  jumlah_kk?: number;
+  jumlah_laki_laki: number;
+  jumlah_perempuan: number;
+  age_groups?: NagariStatsAgeGroup[];
+  education?: NagariStatsCategoryItem[];
+  jobs?: NagariStatsCategoryItem[];
+}
+
+export interface KeuanganNagariData {
+  year: number;
+  activeYear: number | null;
+  availableYears: number[];
+  incomeData: Array<{
+    label: string;
+    value: number;
+    percent: number;
+    color?: string;
+  }>;
+  totalIncome: number;
+  financing: number;
+  totalBelanja: number;
+  expenseData: Array<{
+    name: string;
+    value: number;
+    percent: number;
+    fill?: string;
+  }>;
+  usagePlan: Array<{
+    text: string;
+    amount: number;
+  }>;
+  totalUsagePlan: number;
+}
+
+export interface VisitorStatsBucket {
+  views: number;
+  visitors: number;
+}
+
+export interface VisitorCountryStat {
+  code: string;
+  count: number;
+}
+
+export interface VisitorStatsData {
+  website_id: string;
+  script_url: string;
+  host_url: string;
+  online: number;
+  today: VisitorStatsBucket;
+  month: VisitorStatsBucket;
+  total: VisitorStatsBucket;
+  countries: VisitorCountryStat[];
+  updated_at: string;
+}
+
+export interface VerificationDocumentData {
+  nomor_surat: string;
+  tracking_code?: string | null;
+  tanggal_surat?: string | null;
+  jenis_surat: string;
+  nagari?: string | null;
+  status?: string | null;
+  pemohon?: {
+    nama: string;
+    nik_masked: string;
+  };
+  penandatangan?: {
+    nama: string;
+    jabatan: string;
+  };
+  verified_at?: string;
+}
+
+export interface PublicSurveySummary {
+  total_respondents: number;
+  average_rating: number;
+  ikm_score: number;
+  predicate: string | null;
+  distribution: {
+    "4": number;
+    "3": number;
+    "2": number;
+    "1": number;
+  };
+}
+
+export interface IndeksDesaDimensi {
+  layanan_dasar?: number | null;
+  sosial?: number | null;
+  ekonomi?: number | null;
+  lingkungan?: number | null;
+  aksesibilitas?: number | null;
+  tata_kelola?: number | null;
+  iks?: number | null;
+  ike?: number | null;
+  ikl?: number | null;
+}
+
+export interface IndeksDesaIndikator {
+  dimensi: string;
+  nama: string;
+  skor?: number | null;
+  skor_maks?: number | null;
+  keterangan?: string | null;
+  kegiatan?: string | null;
+  pelaksana?: string | null;
+}
+
+export interface IndeksDesaRecord {
+  id: number;
+  tahun: number;
+  jenis: "indeks_desa" | "idm";
+  skor: number;
+  status: string;
+  target_status?: string | null;
+  skor_minimal?: number | null;
+  dimensi: IndeksDesaDimensi;
+  indikator: IndeksDesaIndikator[];
+  catatan?: string | null;
+  updated_at?: string | null;
+}
+
+export interface IndeksDesaResponse {
+  availableYears: number[];
+  latestYear: number | null;
+  selectedYear: number | null;
+  current: IndeksDesaRecord | null;
+  history: Array<{
+    tahun: number;
+    jenis: "indeks_desa" | "idm";
+    skor: number;
+    status: string;
+    dimensi: IndeksDesaDimensi;
+  }>;
 }
 
 export interface NagariProfile {
@@ -260,19 +419,28 @@ export interface WebGISData {
       };
     }[];
     facilities: any[];
+    infrastruktur?: any[];
   };
 }
 
 export interface Project {
   id: number;
-  name: string;
-  description: string;
-  location: string;
-  budget: number;
-  progress: number;
+  name?: string;
+  nama?: string;
+  description?: string;
+  deskripsi?: string;
+  location?: string;
+  lokasi?: string | null;
+  budget?: number;
+  anggaran?: number | string;
+  progress?: number;
+  progress_persen?: number;
   status: string;
-  year: number;
-  image: string;
+  year?: number;
+  tahun?: number;
+  tanggal_mulai?: string | null;
+  tanggal_selesai?: string | null;
+  image?: string;
 }
 
 export interface Facility {

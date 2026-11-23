@@ -1,17 +1,29 @@
-import { useState, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { 
-  ShieldCheck, Search, FileText, CheckCircle2, XCircle, AlertTriangle, Loader2, QrCode, Scan, ArrowRight
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useRoute } from "wouter";
+import jsQR from "jsqr";
+import {
+  ShieldCheck,
+  Search,
+  FileText,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Loader2,
+  QrCode,
+  ArrowRight,
+  Camera,
+  CameraOff,
+  User,
+  Building2,
 } from "lucide-react";
-import { 
-  Card, CardContent 
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { useLocation } from "wouter";
-import { API_BASE_URL } from "@/lib/api/endpoints";
+import { PUBLIC_API } from "@/lib/api/endpoints";
+import { getTenantHeaders } from "@/lib/api/hooks";
+import type { VerificationDocumentData } from "@/lib/api/types";
 import { useToast } from "@/hooks/use-toast";
 import PageHeader from "@/components/layout/PageHeader";
 import PageBackground from "@/components/layout/PageBackground";
@@ -19,110 +31,369 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import signatureImage from "@assets/generated_images/document_archive_shelves.png";
 
-export default function Verification() {
-  const [, setLocation] = useLocation();
-  const { toast } = useToast();
-  const [verificationCode, setVerificationCode] = useState("");
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [verificationResult, setVerificationResult] = useState<any | null>(null);
-  const [errorStatus, setErrorStatus] = useState<"not_found" | "invalid" | null>(null);
+/**
+ * Extract verification token from raw code OR full QR URL
+ * e.g. "https://nagarimuaro.id/verifikasi-surat/ABC123" -> "ABC123"
+ */
+function extractVerificationToken(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
 
-  const handleVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!verificationCode.trim()) {
+  const urlMatch = trimmed.match(/verifikasi-surat\/([^/?#]+)/i);
+  if (urlMatch?.[1]) {
+    try {
+      return decodeURIComponent(urlMatch[1]).trim();
+    } catch {
+      return urlMatch[1].trim();
+    }
+  }
+
+  const verifyMatch = trimmed.match(/\/verify\/([^/?#]+)/i);
+  if (verifyMatch?.[1]) {
+    try {
+      return decodeURIComponent(verifyMatch[1]).trim();
+    } catch {
+      return verifyMatch[1].trim();
+    }
+  }
+
+  return trimmed;
+}
+
+function formatDateIndonesian(raw?: string | null): string {
+  if (!raw) return "—";
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return raw;
+  return d.toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+export default function Verification() {
+  const { toast } = useToast();
+  const [, routeParams] = useRoute("/verifikasi-surat/:token");
+  const initialToken = routeParams?.token
+    ? extractVerificationToken(routeParams.token)
+    : "";
+
+  const [verificationCode, setVerificationCode] = useState(initialToken);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationResult, setVerificationResult] =
+    useState<VerificationDocumentData | null>(null);
+  const [errorStatus, setErrorStatus] = useState<"not_found" | "invalid" | null>(
+    null
+  );
+  const [errorMessage, setErrorMessage] = useState<string>("");
+
+  // QR Camera Scanner state
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const rafRef = useRef<number>(0);
+
+  const stopCamera = useCallback(() => {
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  }, []);
+
+  const runVerification = useCallback(async (rawInput: string) => {
+    const token = extractVerificationToken(rawInput);
+    if (!token) {
       toast({
-        title: "Peringatan",
-        description: "Masukkan kode registrasi surat atau scan QR Code.",
+        title: "Kode diperlukan",
+        description:
+          "Masukkan kode registrasi, nomor surat, atau pindai QR Code dokumen.",
         variant: "destructive",
       });
       return;
     }
 
+    setVerificationCode(token);
     setIsVerifying(true);
     setErrorStatus(null);
+    setErrorMessage("");
     setVerificationResult(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/public/verify/${verificationCode}`);
-      const data = await response.json();
-      
-      if (response.ok && data.success) {
-        setVerificationResult(data.data);
+      const response = await fetch(PUBLIC_API.VERIFY_SURAT(token), {
+        headers: getTenantHeaders(),
+      });
+      const payload = await response.json();
+
+      if (response.ok && (payload.valid || payload.success) && payload.data) {
+        setVerificationResult(payload.data as VerificationDocumentData);
+      } else if (response.status === 404) {
+        setErrorStatus("not_found");
+        setErrorMessage(
+          payload?.message ||
+            "Dokumen tidak tercatat dalam arsip resmi nagari ini."
+        );
       } else {
         setErrorStatus("invalid");
+        setErrorMessage(
+          payload?.message ||
+            "Format kode registrasi tidak sesuai atau verifikasi gagal."
+        );
       }
-    } catch (error: any) {
-      console.error("Verification error:", error);
+    } catch {
       setErrorStatus("invalid");
+      setErrorMessage("Tidak dapat terhubung ke server verifikasi. Coba lagi.");
     } finally {
       setIsVerifying(false);
     }
+  }, [toast]);
+
+  // Auto-verify when opened via /verifikasi-surat/:token
+  useEffect(() => {
+    if (initialToken) {
+      runVerification(initialToken);
+    }
+  }, [initialToken, runVerification]);
+
+  // Camera lifecycle & jsQR scan loop
+  useEffect(() => {
+    if (!scannerOpen) {
+      stopCamera();
+      return;
+    }
+
+    let cancelled = false;
+    setCameraError(null);
+
+    const startScanner = async () => {
+      if (
+        typeof navigator === "undefined" ||
+        !navigator.mediaDevices?.getUserMedia
+      ) {
+        setCameraError(
+          "Perangkat atau browser Anda tidak mendukung akses kamera langsung. Silakan masukkan kode secara manual."
+        );
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" } },
+          audio: false,
+        });
+
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+
+        streamRef.current = stream;
+        const video = videoRef.current;
+        if (!video) return;
+
+        video.srcObject = stream;
+        video.setAttribute("playsinline", "true");
+        await video.play();
+
+        const scanFrame = () => {
+          if (cancelled || !videoRef.current || !canvasRef.current) return;
+          const v = videoRef.current;
+          if (v.readyState === v.HAVE_ENOUGH_DATA && v.videoWidth > 0) {
+            const canvas = canvasRef.current;
+            canvas.width = v.videoWidth;
+            canvas.height = v.videoHeight;
+            const ctx = canvas.getContext("2d", { willReadFrequently: true });
+            if (ctx) {
+              ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+              const imageData = ctx.getImageData(
+                0,
+                0,
+                canvas.width,
+                canvas.height
+              );
+              const decoded = jsQR(
+                imageData.data,
+                imageData.width,
+                imageData.height,
+                { inversionAttempts: "dontInvert" }
+              );
+              if (decoded?.data) {
+                const token = extractVerificationToken(decoded.data);
+                stopCamera();
+                setScannerOpen(false);
+                toast({
+                  title: "QR Code Terbaca",
+                  description: "Memeriksa keaslian dokumen...",
+                });
+                runVerification(token);
+                return;
+              }
+            }
+          }
+          rafRef.current = requestAnimationFrame(scanFrame);
+        };
+
+        rafRef.current = requestAnimationFrame(scanFrame);
+      } catch {
+        setCameraError(
+          "Izin kamera ditolak atau kamera sedang digunakan aplikasi lain. Aktifkan izin kamera atau ketik kode surat secara manual."
+        );
+      }
+    };
+
+    startScanner();
+    return () => {
+      cancelled = true;
+      stopCamera();
+    };
+  }, [scannerOpen, stopCamera, runVerification, toast]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    runVerification(verificationCode);
   };
 
   return (
     <PageBackground>
       <Navbar />
-      <PageHeader 
-        title="Validasi E-Dokumen" 
-        description="Periksa keaslian tanda tangan elektronik (TTE) pada surat administrasi dan SK yang diterbitkan secara resmi oleh sistem Nagari Portal."
+      <PageHeader
+        title="Validasi E-Dokumen (TTE)"
+        description="Periksa keaslian Tanda Tangan Elektronik pada surat resmi nagari dengan memindai QR Code lewat kamera HP atau memasukkan kode surat."
         image={signatureImage}
       />
-      
-      <div className="container mx-auto px-4 py-16 md:py-24 relative z-10 flex flex-col items-center">
-        
-        <Card className="w-full max-w-2xl bg-white/80 dark:bg-[#0b2023]/80 backdrop-blur-md border border-black/5 dark:border-white/10 shadow-2xl rounded-[2.5rem] relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-teal-600/5 dark:bg-[#3fd5ba]/5 rounded-full blur-[80px] pointer-events-none group-hover:bg-teal-600/10 dark:bg-[#3fd5ba]/10 transition-colors" />
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/micro-carbon.png')] opacity-[0.03] pointer-events-none" />
-          
-          <div className="p-8 md:p-12 text-center relative z-10 border-b border-black/5 dark:border-white/5">
-            <div className="w-20 h-20 bg-[#123136] rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner border border-black/5 dark:border-white/10 relative">
-              <div className="absolute inset-0 rounded-full border border-teal-300 dark:border-[#3fd5ba]/30 animate-ping opacity-20" />
-              <ShieldCheck size={36} className="text-teal-600 dark:text-[#3fd5ba] drop-shadow-[0_0_10px_rgba(63,213,186,0.5)]" />
+
+      <div className="container mx-auto px-4 md:px-6 py-12 md:py-16 flex flex-col items-center">
+        <Card className="w-full max-w-2xl bg-card border border-border rounded-2xl overflow-hidden">
+          <div className="p-6 md:p-8 text-center border-b border-border">
+            <div className="w-16 h-16 bg-nagari-navy rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <ShieldCheck
+                aria-hidden="true"
+                size={30}
+                className="text-nagari-yellow"
+              />
             </div>
-            <h2 className="text-2xl md:text-3xl font-serif font-bold text-slate-800 dark:text-white mb-3">Portal Verifikasi</h2>
-            <p className="text-slate-600 dark:text-white/50 text-sm font-light leading-relaxed max-w-md mx-auto">
-              Silakan masukkan Kode Registrasi Arsip (KRA) yang tercetak pada dokumen, atau pindai QR Code TTE menggunakan kamera scanner.
+            <h2 className="text-2xl font-serif font-bold text-foreground mb-2">
+              Portal Verifikasi Dokumen
+            </h2>
+            <p className="text-muted-foreground text-sm leading-relaxed max-w-md mx-auto">
+              Pindai QR Code yang tercetak pada surat resmi nagari atau ketik Kode Tracking / Nomor Surat di bawah ini.
             </p>
           </div>
 
-          <CardContent className="p-8 md:p-12 relative z-10 bg-white/[0.02]">
-            <form onSubmit={handleVerify} className="space-y-6">
-              <div className="space-y-4">
-                <Label htmlFor="code" className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-600 dark:text-white/50 block text-center">Kode Unik Registrasi Dokumen</Label>
-                <div className="relative max-w-md mx-auto group/input">
-                  <div className="absolute inset-0 bg-teal-600/20 dark:bg-[#3fd5ba]/20 blur-xl rounded-full opacity-0 group-focus-within/input:opacity-100 transition-opacity pointer-events-none" />
-                  <FileText className="absolute left-5 top-5 h-5 w-5 text-teal-600/50 dark:text-[#3fd5ba]/50 z-10" />
-                  <Input 
-                    id="code"
-                    placeholder="Contoh: SR-2025-00123-X" 
-                    className="pl-14 h-16 rounded-2xl bg-slate-50/90 dark:bg-[#0a1a1c]/80 text-center font-mono text-lg border-black/5 dark:border-white/10 text-slate-800 dark:text-white placeholder:text-slate-600 dark:text-white/20 focus:border-teal-300 dark:border-[#3fd5ba]/50 transition-all font-light shadow-inner uppercase tracking-widest relative z-10"
-                    value={verificationCode}
-                    onChange={(e) => setVerificationCode(e.target.value.toUpperCase())}
-                  />
-                  <div className="absolute right-4 top-4 z-20">
-                    <Button type="button" variant="ghost" size="icon" className="hover:bg-white/5 text-slate-600 dark:text-white/40 hover:text-slate-800 dark:text-white rounded-xl">
-                       <Scan className="w-5 h-5" />
-                    </Button>
+          <CardContent className="p-6 md:p-8 space-y-6">
+            {/* QR Camera Scanner Panel */}
+            {scannerOpen && (
+              <div className="rounded-xl border border-border bg-muted/40 p-4 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-foreground inline-flex items-center gap-2">
+                    <Camera aria-hidden="true" size={16} className="text-nagari-red-ink" />
+                    Arahkan Kamera ke QR Code Surat
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setScannerOpen(false)}
+                    className="h-9 px-3 rounded-lg border-border text-[13px]"
+                  >
+                    <CameraOff aria-hidden="true" size={14} className="mr-1.5" />
+                    Tutup Kamera
+                  </Button>
+                </div>
+
+                {cameraError ? (
+                  <p className="text-[13px] text-nagari-red-ink bg-nagari-red/10 border border-nagari-red/25 rounded-lg p-3.5 leading-relaxed">
+                    {cameraError}
+                  </p>
+                ) : (
+                  <div className="relative aspect-[4/3] w-full max-w-md mx-auto overflow-hidden rounded-xl bg-black border border-border">
+                    <video
+                      ref={videoRef}
+                      className="w-full h-full object-cover"
+                      muted
+                      playsInline
+                    />
+                    {/* Clean viewfinder frame */}
+                    <div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-0 flex items-center justify-center"
+                    >
+                      <div className="w-48 h-48 rounded-2xl border-2 border-nagari-yellow shadow-[0_0_0_9999px_rgba(9,20,38,0.45)]" />
+                    </div>
                   </div>
+                )}
+                <canvas ref={canvasRef} className="hidden" />
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-2.5">
+                <Label
+                  htmlFor="verification-code"
+                  className="text-sm font-semibold text-foreground block text-center"
+                >
+                  Kode Verifikasi / Nomor Surat / Kode Tracking
+                </Label>
+                <div className="relative max-w-md mx-auto">
+                  <FileText
+                    aria-hidden="true"
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
+                  />
+                  <Input
+                    id="verification-code"
+                    placeholder="Ketik kode surat atau tempel tautan QR..."
+                    className="pl-10 h-12 rounded-xl text-center font-mono text-base"
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value)}
+                  />
                 </div>
               </div>
-              
-              <div className="pt-4 flex justify-center">
-                <Button 
-                  type="submit" 
-                  disabled={isVerifying || !verificationCode.trim()} 
-                  className="bg-teal-500 dark:bg-[#3fd5ba] text-white dark:text-[#0a1a1c] hover:bg-teal-600 dark:hover:bg-white rounded-full h-14 px-10 font-bold uppercase tracking-widest text-xs shadow-[0_0_20px_rgba(63,213,186,0.3)] transition-all disabled:opacity-50 disabled:shadow-none min-w-[200px]"
+
+              <div className="flex flex-col sm:flex-row justify-center gap-3">
+                <Button
+                  type="submit"
+                  disabled={isVerifying || !verificationCode.trim()}
+                  className="bg-nagari-red text-white hover:bg-nagari-red-ink rounded-lg h-12 px-7 font-medium text-sm transition-colors disabled:opacity-50"
                 >
                   {isVerifying ? (
                     <>
-                      <Loader2 className="mr-3 h-5 w-5 animate-spin" />
-                      Memeriksa Database...
+                      <Loader2
+                        aria-hidden="true"
+                        className="mr-2 h-4 w-4 animate-spin"
+                      />
+                      Memeriksa...
                     </>
                   ) : (
                     <>
-                      <Search className="mr-3 h-5 w-5" />
-                      Validasi Spesimen
+                      <Search aria-hidden="true" className="mr-2 h-4 w-4" />
+                      Validasi Dokumen
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setScannerOpen((prev) => !prev)}
+                  className="rounded-lg h-12 px-6 border-border text-foreground hover:bg-muted font-medium text-sm"
+                >
+                  {scannerOpen ? (
+                    <>
+                      <CameraOff aria-hidden="true" className="mr-2 h-4 w-4" />
+                      Tutup Pemindai
+                    </>
+                  ) : (
+                    <>
+                      <Camera aria-hidden="true" className="mr-2 h-4 w-4 text-nagari-red-ink" />
+                      Pindai QR Kamera
                     </>
                   )}
                 </Button>
@@ -132,119 +403,174 @@ export default function Verification() {
         </Card>
 
         {/* Verification Result Area */}
-        <div className="w-full max-w-2xl mt-12">
-          <AnimatePresence mode="wait">
-            {verificationResult && (
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="w-full"
-              >
-                <div className="bg-gradient-to-br from-[#123136] to-[#0a1a1c] border border-teal-300 dark:border-[#3fd5ba]/30 rounded-[2.5rem] shadow-[0_0_40px_rgba(63,213,186,0.15)] overflow-hidden relative group">
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-teal-600/10 dark:bg-[#3fd5ba]/10 rounded-full blur-[60px] pointer-events-none" />
-                  
-                  <div className="bg-teal-600/10 dark:bg-[#3fd5ba]/10 py-6 px-8 border-b border-teal-300 dark:border-[#3fd5ba]/20 flex items-center justify-center gap-4 relative z-10">
-                    <div className="w-12 h-12 bg-teal-500 dark:bg-[#3fd5ba] rounded-full flex items-center justify-center shadow-md dark:shadow-[0_0_15px_rgba(63,213,186,0.5)] shrink-0">
-                      <CheckCircle2 size={24} className="text-white dark:text-[#0a1a1c]" />
+        <div className="w-full max-w-2xl mt-8">
+          {verificationResult && (
+            <div className="bg-nagari-navy text-white border border-white/15 rounded-2xl overflow-hidden">
+              <div className="py-5 px-6 border-b border-white/15 flex items-center gap-4">
+                <div className="w-11 h-11 bg-emerald-500/20 border border-emerald-400/30 rounded-xl flex items-center justify-center shrink-0">
+                  <CheckCircle2
+                    aria-hidden="true"
+                    size={22}
+                    className="text-emerald-300"
+                  />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold font-serif text-white">
+                    Dokumen Sah &amp; Tervalidasi
+                  </h3>
+                  <p className="text-nagari-yellow text-[13px] font-medium">
+                    Tanda Tangan Elektronik Resmi Nagari
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6 md:p-8 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-3.5">
+                    <div className="bg-white/5 p-4 rounded-xl border border-white/10">
+                      <p className="text-white/70 text-[13px] mb-1">
+                        Nomor / Kode Surat
+                      </p>
+                      <p className="font-mono font-semibold text-white text-sm break-all">
+                        {verificationResult.nomor_surat || verificationCode}
+                      </p>
                     </div>
-                    <div>
-                      <h3 className="text-xl font-bold font-serif text-slate-800 dark:text-white tracking-wide">Dokumen Sah & Tervalidasi</h3>
-                      <p className="text-teal-600 dark:text-[#3fd5ba] text-[10px] font-bold uppercase tracking-widest mt-1">Tanda Tangan Elektronik Asli</p>
+                    <div className="bg-white/5 p-4 rounded-xl border border-white/10">
+                      <p className="text-white/70 text-[13px] mb-1">
+                        Jenis Dokumen
+                      </p>
+                      <p className="font-semibold text-white text-sm">
+                        {verificationResult.jenis_surat}
+                      </p>
+                    </div>
+                    <div className="bg-white/5 p-4 rounded-xl border border-white/10">
+                      <p className="text-white/70 text-[13px] mb-1">
+                        Tanggal Pengesahan
+                      </p>
+                      <p className="font-medium text-white text-sm">
+                        {formatDateIndonesian(verificationResult.tanggal_surat)}
+                      </p>
                     </div>
                   </div>
-                  
-                  <div className="p-8 md:p-12 space-y-8 relative z-10">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div className="space-y-6">
-                        <div className="bg-white/5 p-4 rounded-2xl border border-black/5 dark:border-white/5">
-                          <p className="text-slate-600 dark:text-white/40 text-[9px] uppercase font-bold tracking-widest mb-1.5">Nomor Registrasi Surat</p>
-                          <p className="font-mono font-medium text-slate-600 dark:text-white/90 text-sm">{verificationResult.nomor_surat || verificationCode}</p>
-                        </div>
-                        <div className="bg-white/5 p-4 rounded-2xl border border-black/5 dark:border-white/5">
-                          <p className="text-slate-600 dark:text-white/40 text-[9px] uppercase font-bold tracking-widest mb-1.5">Jenis Dokumen</p>
-                          <p className="font-semibold text-slate-600 dark:text-white/90 text-sm">{verificationResult.jenis_surat || "Surat Keterangan Nagari"}</p>
-                        </div>
-                        <div className="bg-white/5 p-4 rounded-2xl border border-black/5 dark:border-white/5">
-                          <p className="text-slate-600 dark:text-white/40 text-[9px] uppercase font-bold tracking-widest mb-1.5">Tanggal Terbit & Pengesahan</p>
-                          <p className="font-medium text-slate-600 dark:text-white/90 text-sm">{verificationResult.tanggal_terbit || new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-6">
-                        <div className="bg-white dark:bg-[#0b2023] p-5 rounded-3xl border border-teal-300 dark:border-[#3fd5ba]/20 text-center h-full flex flex-col justify-center items-center relative overflow-hidden">
-                           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-teal-600/5 dark:bg-[#3fd5ba]/5 rounded-full blur-[40px] pointer-events-none" />
-                           <QrCode size={40} className="text-teal-600/30 dark:text-[#3fd5ba]/30 mb-4" />
-                           <p className="text-slate-600 dark:text-white/40 text-[9px] uppercase font-bold tracking-widest mb-2">Penandatangan Dokumen</p>
-                           <p className="text-lg font-bold font-serif text-slate-800 dark:text-white leading-tight mb-1">{verificationResult.penandatangan || "Wali Nagari"}</p>
-                           <p className="text-teal-600 dark:text-[#3fd5ba] text-xs font-medium">Digital Signature System</p>
-                           {verificationResult.jabatan && (
-                             <Badge className="mt-4 bg-white/5 text-slate-600 dark:text-white/60 border border-black/5 dark:border-white/10 text-[9px] uppercase tracking-widest">{verificationResult.jabatan}</Badge>
-                           )}
-                        </div>
-                      </div>
+
+                  <div className="space-y-3.5 flex flex-col">
+                    <div className="bg-white/5 p-5 rounded-xl border border-white/10 text-center flex flex-col justify-center items-center flex-1">
+                      <QrCode
+                        aria-hidden="true"
+                        size={34}
+                        className="text-nagari-yellow mb-2.5"
+                      />
+                      <p className="text-white/70 text-[13px] mb-1">
+                        Penandatangan Dokumen
+                      </p>
+                      <p className="text-lg font-bold font-serif text-white leading-snug mb-1">
+                        {verificationResult.penandatangan?.nama || "Wali Nagari"}
+                      </p>
+                      <p className="text-nagari-yellow text-[13px] font-medium">
+                        {verificationResult.penandatangan?.jabatan ||
+                          "Wali Nagari"}
+                      </p>
+                      {verificationResult.nagari && (
+                        <Badge className="mt-3 bg-white/10 text-white border border-white/15 text-[13px] font-medium">
+                          <Building2
+                            aria-hidden="true"
+                            size={13}
+                            className="mr-1.5"
+                          />
+                          {verificationResult.nagari}
+                        </Badge>
+                      )}
                     </div>
-                    
-                    <div className="pt-6 border-t border-black/5 dark:border-white/10 flex justify-center">
-                      <Button variant="outline" className="rounded-full border-teal-300 dark:border-[#3fd5ba]/30 text-teal-600 dark:text-[#3fd5ba] hover:bg-teal-600/10 dark:bg-[#3fd5ba]/10 px-8 h-12 uppercase tracking-widest text-[10px] font-bold transition-all shadow-inner" onClick={() => {setVerificationResult(null); setVerificationCode("")}}>
-                        Verifikasi Dokumen Lain <ArrowRight className="ml-2 w-4 h-4" />
-                      </Button>
-                    </div>
+
+                    {verificationResult.pemohon && (
+                      <div className="bg-white/5 p-4 rounded-xl border border-white/10">
+                        <p className="text-white/70 text-[13px] mb-1 inline-flex items-center gap-1.5">
+                          <User aria-hidden="true" size={13} />
+                          Pemohon (Terlindungi)
+                        </p>
+                        <p className="font-semibold text-white text-sm">
+                          {verificationResult.pemohon.nama}
+                        </p>
+                        <p className="font-mono text-[13px] text-white/75 mt-0.5 tabular-nums">
+                          NIK: {verificationResult.pemohon.nik_masked}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </motion.div>
-            )}
 
-            {errorStatus === "not_found" && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="w-full"
-              >
-                <div className="bg-[#35101a] border border-rose-500/30 rounded-[2.5rem] shadow-[0_0_40px_rgba(244,63,94,0.15)] overflow-hidden text-center p-12 relative isolate">
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-rose-500/10 rounded-full blur-[60px] pointer-events-none -z-10" />
-                  
-                  <div className="w-20 h-20 bg-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-rose-500/30 shadow-inner">
-                    <AlertTriangle size={36} className="text-rose-400 drop-shadow-[0_0_10px_rgba(244,63,94,0.5)]" />
-                  </div>
-                  <h3 className="text-2xl font-bold font-serif text-slate-800 dark:text-white mb-3">Dokumen Tidak Ditemukan</h3>
-                  <p className="text-rose-200/60 font-light text-sm max-w-sm mx-auto mb-8">
-                    Kode registrasi dokumen <strong>{verificationCode}</strong> tidak tercatat dalam basis data arsip Nagari.
-                  </p>
-                  <Button variant="outline" className="rounded-full border-rose-500/30 text-rose-400 hover:bg-rose-500/20 hover:text-slate-800 dark:text-white px-8 h-12 uppercase tracking-widest text-[10px] font-bold" onClick={() => setErrorStatus(null)}>
-                    Coba Kembali
+                <div className="pt-4 border-t border-white/15 flex justify-center">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-lg border-white/25 bg-white/10 text-white hover:bg-white/20 px-6 h-11 text-sm font-medium"
+                    onClick={() => {
+                      setVerificationResult(null);
+                      setVerificationCode("");
+                    }}
+                  >
+                    Verifikasi Dokumen Lain
+                    <ArrowRight aria-hidden="true" className="ml-2 w-4 h-4" />
                   </Button>
                 </div>
-              </motion.div>
-            )}
+              </div>
+            </div>
+          )}
 
-            {errorStatus === "invalid" && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="w-full"
+          {errorStatus === "not_found" && (
+            <div className="bg-card border border-nagari-red/40 rounded-2xl text-center p-8 md:p-10">
+              <div className="w-14 h-14 bg-nagari-red/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle
+                  aria-hidden="true"
+                  size={28}
+                  className="text-nagari-red-ink"
+                />
+              </div>
+              <h3 className="text-xl font-bold font-serif text-foreground mb-2">
+                Dokumen Tidak Ditemukan
+              </h3>
+              <p className="text-muted-foreground text-sm max-w-md mx-auto mb-6 leading-relaxed">
+                {errorMessage ||
+                  `Kode "${verificationCode}" tidak tercatat dalam arsip resmi nagari ini.`}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-lg h-11 px-6 text-sm font-medium"
+                onClick={() => setErrorStatus(null)}
               >
-                <div className="bg-[#1a0f02] border border-orange-500/30 rounded-[2.5rem] shadow-[0_0_40px_rgba(249,115,22,0.15)] overflow-hidden text-center p-12 relative isolate">
-                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-orange-500/10 rounded-full blur-[60px] pointer-events-none -z-10" />
-                  
-                  <div className="w-20 h-20 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-orange-500/30 shadow-inner">
-                    <XCircle size={36} className="text-orange-400 drop-shadow-[0_0_10px_rgba(249,115,22,0.5)]" />
-                  </div>
-                  <h3 className="text-2xl font-bold font-serif text-slate-800 dark:text-white mb-3">Verifikasi Gagal</h3>
-                  <p className="text-orange-200/60 font-light text-sm max-w-sm mx-auto mb-8">
-                    Terdapat gangguan saat melakukan validasi spesimen, atau kode unik diinput dengan format yang salah.
-                  </p>
-                  <Button variant="outline" className="rounded-full border-orange-500/30 text-orange-400 hover:bg-orange-500/20 hover:text-slate-800 dark:text-white px-8 h-12 uppercase tracking-widest text-[10px] font-bold" onClick={() => setErrorStatus(null)}>
-                    Ulangi Validasi
-                  </Button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                Coba Kembali
+              </Button>
+            </div>
+          )}
+
+          {errorStatus === "invalid" && (
+            <div className="bg-card border border-nagari-red/40 rounded-2xl text-center p-8 md:p-10">
+              <div className="w-14 h-14 bg-nagari-red/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <XCircle
+                  aria-hidden="true"
+                  size={28}
+                  className="text-nagari-red-ink"
+                />
+              </div>
+              <h3 className="text-xl font-bold font-serif text-foreground mb-2">
+                Verifikasi Gagal
+              </h3>
+              <p className="text-muted-foreground text-sm max-w-md mx-auto mb-6 leading-relaxed">
+                {errorMessage ||
+                  "Terjadi gangguan saat memeriksa spesimen atau format kode registrasi tidak sesuai."}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-lg h-11 px-6 text-sm font-medium"
+                onClick={() => setErrorStatus(null)}
+              >
+                Ulangi Validasi
+              </Button>
+            </div>
+          )}
         </div>
-        
       </div>
       <Footer />
     </PageBackground>

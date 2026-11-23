@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, X, ChevronRight } from "lucide-react";
+import { Menu, X, ChevronRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
 import { useSiteSettings } from "@/lib/api";
 import { API_BASE_URL } from "@/lib/api/endpoints";
 import { ThemeToggle } from "./ThemeToggle";
+import { getTenantName } from "@/lib/tenant-name";
 
 const getAbsoluteUrl = (path: string | undefined): string | undefined => {
   if (!path) return undefined;
@@ -18,24 +18,18 @@ const getAbsoluteUrl = (path: string | undefined): string | undefined => {
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
   const [location] = useLocation();
   const menuRef = useRef<HTMLDivElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
 
   const { data: settingsData } = useSiteSettings();
   const settings = settingsData?.data;
 
-  const siteName = settings?.site_name || "Nagari";
+  const siteName = getTenantName(settings);
+  const kabupaten = settings?.kabupaten?.trim().replace(/^(?:kabupaten|kab\.?)\s*/i, "");
+  const locationLabel = kabupaten ? `Kab. ${kabupaten}` : "Portal Nagari";
   const siteLogo = getAbsoluteUrl(settings?.site_logo);
-  const siteInitials = siteName.split(' ').map((word: string) => word[0]).join('').substring(0, 2).toUpperCase() || "SP";
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  const siteInitials = siteName.split(' ').map((word: string) => word[0]).join('').substring(0, 2).toUpperCase() || "NP";
 
   useEffect(() => {
     if (isOpen) {
@@ -49,161 +43,233 @@ export default function Navbar() {
     return () => { document.body.style.overflow = "unset"; };
   }, [isOpen]);
 
-  const navItemClass = scrolled
-    ? "text-slate-700 dark:text-white/80 hover:text-teal-600 dark:hover:text-[#3fd5ba]"
-    : "text-white hover:text-white/80";
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+        toggleRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen]);
+
+  useEffect(() => {
+    setIsOpen(false);
+  }, [location]);
+
+  const isActive = (path: string) => (path === "/" ? location === "/" : location.startsWith(path));
+
+  const linkClass = (active: boolean) =>
+    cn(
+      "px-3.5 py-2 rounded-lg text-[15px] font-medium transition-colors whitespace-nowrap",
+      active
+        ? "text-nagari-red-ink font-semibold underline decoration-2 underline-offset-8"
+        : "text-foreground/80 hover:text-foreground hover:bg-muted"
+    );
 
   return (
     <>
-      <motion.nav
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.3 }}
-        className={cn(
-          "fixed top-0 w-full z-[100] transition-all duration-300",
-          scrolled
-            ? "bg-white/80 dark:bg-[#0b2023]/80 backdrop-blur-xl border-b border-black/5 dark:border-white/[0.05] py-3 shadow-lg"
-            : "bg-transparent py-4"
-        )}
-      >
-        <div className="container mx-auto px-4 md:px-6 flex items-center justify-between">
+      <header className="fixed top-0 inset-x-0 h-[72px] z-[100] bg-background border-b border-border">
+        <nav
+          aria-label="Navigasi utama"
+          className="container mx-auto h-full px-4 md:px-6 flex items-center justify-between gap-4"
+        >
           <Link href="/">
-            <a className="flex items-center gap-3 group relative z-50">
-              <div className="w-9 h-9 rounded-lg flex items-center justify-center shadow-sm overflow-hidden flex-shrink-0 border border-black/5 dark:border-white/10">
+            <a className="flex items-center gap-3 group relative z-50 min-w-0">
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0 border border-border bg-card">
                 {siteLogo ? (
-                  <img src={siteLogo} alt={siteName} className="w-full h-full object-contain bg-white dark:bg-white/5" />
+                  <img src={siteLogo} alt={siteName} className="w-full h-full object-contain bg-white" />
                 ) : (
-                  <div className={cn("w-full h-full flex items-center justify-center text-teal-700 dark:text-[#3fd5ba] font-serif font-bold text-sm bg-teal-50 dark:bg-[#144749]/50")}>
+                  <div className="w-full h-full flex items-center justify-center bg-nagari-navy text-white font-serif font-semibold text-sm">
                     {siteInitials}
                   </div>
                 )}
               </div>
-              <div className={cn("flex flex-col transition-colors duration-300", scrolled ? "text-slate-900 dark:text-white" : "text-white")}>
-                <span className="font-serif font-bold text-base leading-snug tracking-wide">{siteName}</span>
-                <span className={cn("text-xs uppercase tracking-wider font-medium opacity-75", scrolled ? "text-teal-600 dark:text-[#3fd5ba]/70" : "text-white/70")}>Portal Nagari</span>
+              <div className="flex flex-col min-w-0 text-foreground">
+                <span className="font-serif font-bold text-base leading-tight truncate">{siteName}</span>
+                <span className="text-[13px] font-medium text-muted-foreground truncate">{locationLabel}</span>
               </div>
             </a>
           </Link>
 
           {/* Desktop Menu */}
           <div className="hidden lg:flex items-center gap-1">
-            <Link href="/"><a className={cn("px-4 py-2 rounded-lg text-sm font-medium transition-colors", location === '/' ? "text-teal-600 dark:text-[#3fd5ba]" : navItemClass)}>Beranda</a></Link>
+            <Link href="/"><a aria-current={isActive("/") ? "page" : undefined} className={linkClass(isActive("/"))}>Beranda</a></Link>
 
-            <NavDropdown label="Profil" scrolled={scrolled} items={[
+            <NavDropdown label="Profil" items={[
               { label: "Profil Nagari", href: "/profil" },
               { label: "Monografi", href: "/monografi" }
             ]} />
 
-            <NavDropdown label="Pemerintahan" scrolled={scrolled} items={[
+            <NavDropdown label="Pemerintahan" items={[
               { label: "PPID & Dokumen", href: "/ppid" },
               { label: "Data Publik", href: "/data-publik" },
               { label: "Infografis APB", href: "/infografis" },
+              { label: "Indeks Desa (IDM)", href: "/indeks-desa" },
               { label: "Proyek Pembangunan", href: "/proyek" }
             ]} />
 
-            <NavDropdown label="Layanan" scrolled={scrolled} items={[
+            <NavDropdown label="Layanan" items={[
               { label: "Layanan Surat", href: "/layanan" },
+              { label: "Verifikasi Surat (TTE)", href: "/verifikasi" },
               { label: "Pengaduan", href: "/pengaduan" }
             ]} />
 
-            <NavDropdown label="Potensi" scrolled={scrolled} items={[
+            <NavDropdown label="Potensi" items={[
               { label: "UMKM", href: "/umkm" },
               { label: "Fasilitas & Wisata", href: "/fasilitas" },
               { label: "Peta Digital (GIS)", href: "/gis" }
             ]} />
 
-            <Link href="/berita"><a className={cn("px-4 py-2 rounded-lg text-sm font-medium transition-colors", location.startsWith('/berita') ? "text-teal-600 dark:text-[#3fd5ba]" : navItemClass)}>Berita</a></Link>
-            <Link href="/kontak"><a className={cn("px-4 py-2 rounded-lg text-sm font-medium transition-colors", location === '/kontak' ? "text-teal-600 dark:text-[#3fd5ba]" : navItemClass)}>Kontak</a></Link>
+            <Link href="/berita"><a aria-current={isActive("/berita") ? "page" : undefined} className={linkClass(isActive("/berita"))}>Berita</a></Link>
+            <Link href="/kontak"><a aria-current={isActive("/kontak") ? "page" : undefined} className={linkClass(isActive("/kontak"))}>Kontak</a></Link>
           </div>
 
           {/* CTA Button */}
-          <div className="hidden lg:flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-2.5 flex-shrink-0">
             <ThemeToggle />
             <Link href="/layanan">
-              <Button className="bg-teal-500 dark:bg-[#3fd5ba] text-white dark:text-[#0a1a1c] hover:bg-teal-600 dark:hover:bg-white rounded-lg h-10 px-6 text-sm font-semibold transition-all">
+              <Button className="bg-nagari-red text-white hover:bg-nagari-red-ink rounded-lg h-11 px-5 text-sm font-medium transition-colors whitespace-nowrap">
                 Layanan Online
               </Button>
             </Link>
           </div>
 
-          {/* Mobile Toggle */}
-          <div className="lg:hidden flex items-center gap-2 relative z-50">
+          {/* Tablet / Mobile Controls */}
+          <div className="lg:hidden flex items-center gap-2 relative z-50 flex-shrink-0">
+            <Link href="/layanan" className="hidden sm:inline-flex">
+              <Button className="bg-nagari-red text-white hover:bg-nagari-red-ink rounded-lg h-11 px-4 text-sm font-medium transition-colors whitespace-nowrap">
+                Layanan Online
+              </Button>
+            </Link>
             <ThemeToggle />
             <button
-              className="p-2 rounded-lg text-slate-800 dark:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+              ref={toggleRef}
+              type="button"
+              aria-label={isOpen ? "Tutup menu navigasi" : "Buka menu navigasi"}
+              aria-expanded={isOpen}
+              aria-controls="mobile-menu"
+              className="w-11 h-11 rounded-lg border border-border bg-background hover:bg-muted text-foreground flex items-center justify-center transition-colors"
               onClick={() => setIsOpen(!isOpen)}
             >
-              {isOpen ? <X size={20} className="text-teal-600 dark:text-[#3fd5ba]" /> : <Menu size={20} />}
+              {isOpen ? <X aria-hidden="true" size={20} /> : <Menu aria-hidden="true" size={20} />}
             </button>
           </div>
-        </div>
-      </motion.nav>
+        </nav>
+      </header>
 
       {/* Mobile Menu */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            ref={menuRef}
-            initial={{ opacity: 0, clipPath: "circle(0% at 100% 0%)" }}
-            animate={{ opacity: 1, clipPath: "circle(150% at 100% 0%)" }}
-            exit={{ opacity: 0, clipPath: "circle(0% at 100% 0%)" }}
-            transition={{ duration: 0.5, ease: "easeInOut" }}
-            className="fixed top-0 left-0 right-0 bottom-0 bg-white dark:bg-[#0a1a1c] z-[99] flex flex-col pt-24 px-6 overflow-y-auto"
-          >
-            <div className="flex flex-col gap-4 relative z-10 pb-10">
-              <MobileLink href="/" onClick={() => setIsOpen(false)}>Beranda</MobileLink>
+      {isOpen && (
+        <div
+          ref={menuRef}
+          id="mobile-menu"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Menu navigasi"
+          className="fixed inset-0 top-[72px] bg-background z-[99] flex flex-col px-6 py-6 overflow-y-auto border-t border-border"
+        >
+          <div className="flex flex-col gap-5 pb-10">
+            <MobileLink href="/" onClick={() => setIsOpen(false)}>Beranda</MobileLink>
 
-              <MobileSection title="Profil">
-                <MobileLink href="/profil" onClick={() => setIsOpen(false)}>Profil Nagari</MobileLink>
-                <MobileLink href="/monografi" onClick={() => setIsOpen(false)}>Monografi</MobileLink>
-              </MobileSection>
+            <MobileSection title="Profil">
+              <MobileLink href="/profil" onClick={() => setIsOpen(false)}>Profil Nagari</MobileLink>
+              <MobileLink href="/monografi" onClick={() => setIsOpen(false)}>Monografi</MobileLink>
+            </MobileSection>
 
-              <MobileSection title="Pemerintahan">
-                <MobileLink href="/ppid" onClick={() => setIsOpen(false)}>PPID & Dokumen</MobileLink>
-                <MobileLink href="/data-publik" onClick={() => setIsOpen(false)}>Data Publik</MobileLink>
-                <MobileLink href="/infografis" onClick={() => setIsOpen(false)}>Infografis APB</MobileLink>
-                <MobileLink href="/proyek" onClick={() => setIsOpen(false)}>Proyek Pembangunan</MobileLink>
-              </MobileSection>
+            <MobileSection title="Pemerintahan">
+              <MobileLink href="/ppid" onClick={() => setIsOpen(false)}>PPID & Dokumen</MobileLink>
+              <MobileLink href="/data-publik" onClick={() => setIsOpen(false)}>Data Publik</MobileLink>
+              <MobileLink href="/infografis" onClick={() => setIsOpen(false)}>Infografis APB</MobileLink>
+              <MobileLink href="/indeks-desa" onClick={() => setIsOpen(false)}>Indeks Desa (IDM)</MobileLink>
+              <MobileLink href="/proyek" onClick={() => setIsOpen(false)}>Proyek Pembangunan</MobileLink>
+            </MobileSection>
 
-              <MobileSection title="Layanan">
-                <MobileLink href="/layanan" onClick={() => setIsOpen(false)}>Layanan Surat</MobileLink>
-                <MobileLink href="/pengaduan" onClick={() => setIsOpen(false)}>Pengaduan</MobileLink>
-                <MobileLink href="/verifikasi" onClick={() => setIsOpen(false)}>Verifikasi Dokumen</MobileLink>
-              </MobileSection>
+            <MobileSection title="Layanan">
+              <MobileLink href="/layanan" onClick={() => setIsOpen(false)}>Layanan Surat</MobileLink>
+              <MobileLink href="/verifikasi" onClick={() => setIsOpen(false)}>Verifikasi Surat (TTE)</MobileLink>
+              <MobileLink href="/pengaduan" onClick={() => setIsOpen(false)}>Pengaduan</MobileLink>
+            </MobileSection>
 
-              <MobileSection title="Potensi">
-                <MobileLink href="/umkm" onClick={() => setIsOpen(false)}>UMKM</MobileLink>
-                <MobileLink href="/fasilitas" onClick={() => setIsOpen(false)}>Fasilitas & Wisata</MobileLink>
-                <MobileLink href="/gis" onClick={() => setIsOpen(false)}>Peta Digital (GIS)</MobileLink>
-              </MobileSection>
+            <MobileSection title="Potensi">
+              <MobileLink href="/umkm" onClick={() => setIsOpen(false)}>UMKM</MobileLink>
+              <MobileLink href="/fasilitas" onClick={() => setIsOpen(false)}>Fasilitas & Wisata</MobileLink>
+              <MobileLink href="/gis" onClick={() => setIsOpen(false)}>Peta Digital (GIS)</MobileLink>
+            </MobileSection>
 
-              <MobileLink href="/berita" onClick={() => setIsOpen(false)}>Berita</MobileLink>
-              <MobileLink href="/kontak" onClick={() => setIsOpen(false)}>Kontak</MobileLink>
+            <MobileLink href="/berita" onClick={() => setIsOpen(false)}>Berita</MobileLink>
+            <MobileLink href="/kontak" onClick={() => setIsOpen(false)}>Kontak</MobileLink>
 
-              <Link href="/layanan">
-                <Button className="w-full mt-6 bg-teal-500 dark:bg-[#3fd5ba] text-white dark:text-[#0a1a1c] hover:bg-teal-600 dark:hover:bg-white rounded-lg h-11 font-semibold" onClick={() => setIsOpen(false)}>
-                  Akses Layanan Online
-                </Button>
-              </Link>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <Link href="/layanan">
+              <Button className="w-full mt-2 bg-nagari-red text-white hover:bg-nagari-red-ink rounded-lg h-12 text-base font-medium" onClick={() => setIsOpen(false)}>
+                Layanan Online
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
     </>
   );
 }
 
-function NavDropdown({ label, scrolled, items }: { label: string; scrolled: boolean; items: Array<{ label: string; href: string }> }) {
+function NavDropdown({ label, items }: { label: string; items: Array<{ label: string; href: string }> }) {
+  const [open, setOpen] = useState(false);
+  const [location] = useLocation();
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelId = `nav-menu-${label.toLowerCase().replace(/\s+/g, "-")}`;
+  const hasActiveChild = items.some((item) => location.startsWith(item.href));
+
   return (
-    <div className="relative group">
-      <button className={cn("px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1", scrolled ? "text-slate-700 dark:text-white/80 hover:text-teal-600 dark:hover:text-[#3fd5ba]" : "text-white hover:text-white/80")}>
+    <div
+      className="relative"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onFocus={() => setOpen(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setOpen(false);
+        }
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && open) {
+          setOpen(false);
+          buttonRef.current?.focus();
+        }
+      }}
+    >
+      <button
+        ref={buttonRef}
+        type="button"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((value) => !value)}
+        className={cn(
+          "px-3.5 py-2 rounded-lg text-[15px] font-medium transition-colors flex items-center gap-1 whitespace-nowrap",
+          hasActiveChild
+            ? "text-nagari-red-ink font-semibold"
+            : "text-foreground/80 hover:text-foreground hover:bg-muted"
+        )}
+      >
         {label}
-        <ChevronRight size={16} className="group-hover:rotate-90 transition-transform" />
+        <ChevronDown aria-hidden="true" size={16} className={cn("transition-transform duration-150", open && "rotate-180")} />
       </button>
-      <div className="absolute top-full left-0 mt-1 w-56 bg-white dark:bg-[#0b2023]/95 backdrop-blur-xl rounded-lg shadow-lg dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-black/5 dark:border-white/[0.08] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 py-2 z-50">
+      <div
+        id={panelId}
+        hidden={!open}
+        className="absolute top-full left-0 mt-1 w-56 bg-popover text-popover-foreground rounded-xl border border-border py-1.5 z-50 shadow-sm"
+      >
         {items.map(item => (
           <Link key={item.href} href={item.href}>
-            <a className="block px-4 py-2 text-sm text-slate-600 dark:text-white/70 hover:text-teal-600 dark:hover:text-[#3fd5ba] hover:bg-teal-50/50 dark:hover:bg-white/[0.03] transition-colors">{item.label}</a>
+            <a
+              aria-current={location.startsWith(item.href) ? "page" : undefined}
+              className={cn(
+                "block px-4 py-2.5 text-sm transition-colors hover:bg-muted hover:text-foreground",
+                location.startsWith(item.href) ? "text-nagari-red-ink font-semibold bg-muted/60" : "text-foreground/80"
+              )}
+            >
+              {item.label}
+            </a>
           </Link>
         ))}
       </div>
@@ -213,8 +279,8 @@ function NavDropdown({ label, scrolled, items }: { label: string; scrolled: bool
 
 function MobileSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-2">
-      <h4 className="text-teal-600/60 dark:text-[#3fd5ba]/40 text-xs font-bold uppercase tracking-widest px-4">{title}</h4>
+    <div className="space-y-1.5">
+      <p className="text-muted-foreground text-[13px] font-semibold px-3">{title}</p>
       <div className="space-y-1">
         {children}
       </div>
@@ -223,11 +289,21 @@ function MobileSection({ title, children }: { title: string; children: React.Rea
 }
 
 function MobileLink({ href, children, onClick }: { href: string; children: React.ReactNode; onClick: () => void }) {
+  const [location] = useLocation();
+  const active = href === "/" ? location === "/" : location.startsWith(href);
+
   return (
     <Link href={href}>
-      <a onClick={onClick} className="flex items-center justify-between px-4 py-3 rounded-lg text-lg font-medium text-slate-700 dark:text-white/80 hover:bg-teal-50 dark:hover:bg-white/10 hover:text-teal-700 dark:hover:text-white transition-all">
+      <a
+        onClick={onClick}
+        aria-current={active ? "page" : undefined}
+        className={cn(
+          "flex items-center justify-between min-h-[48px] px-3 py-2.5 rounded-lg text-base font-medium transition-colors hover:bg-muted",
+          active ? "text-nagari-red-ink font-semibold bg-muted" : "text-foreground"
+        )}
+      >
         {children}
-        <ChevronRight size={16} className="opacity-50 text-teal-600 dark:text-[#3fd5ba]" />
+        <ChevronRight aria-hidden="true" size={16} className="text-muted-foreground" />
       </a>
     </Link>
   );

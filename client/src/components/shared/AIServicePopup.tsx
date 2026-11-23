@@ -3,18 +3,22 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Bot, MessageCircle, Sparkles, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSiteSettings } from "@/lib/api";
+import { getTenantName } from "@/lib/tenant-name";
+import { getTenantWhatsAppNumber } from "@/lib/whatsapp";
 
 export default function AIServicePopup() {
   const [isOpen, setIsOpen] = useState(true); // Always show on initial load
   const { data: siteSettingsData } = useSiteSettings();
   const siteSettings = siteSettingsData?.data;
+  const tenantName = getTenantName(siteSettings);
+  const whatsappNumber = getTenantWhatsAppNumber(siteSettings);
 
   const handleClose = () => {
     setIsOpen(false);
   };
 
   const handleContactAI = () => {
-    const whatsappNumber = siteSettings?.contact_whatsapp?.replace(/[^0-9]/g, "") || "6285126290645";
+    if (!whatsappNumber) return;
     const message = encodeURIComponent("Halo, saya ingin menggunakan layanan AI Assistant Nagari.");
     window.open(`https://wa.me/${whatsappNumber}?text=${message}`, "_blank");
     handleClose();
@@ -22,7 +26,7 @@ export default function AIServicePopup() {
 
   return (
     <AnimatePresence>
-      {isOpen && (
+      {isOpen && whatsappNumber && (
         <>
           {/* Backdrop */}
           <motion.div
@@ -78,7 +82,7 @@ export default function AIServicePopup() {
                   Layanan Whatsapp 24 Jam
                 </h2>
                 <p className="text-white/90 text-center text-xs sm:text-sm">
-                  Nagari Muaro
+                  {tenantName}
                 </p>
               </div>
 
@@ -96,7 +100,7 @@ export default function AIServicePopup() {
                   </div>
 
                   <p className="text-gray-600 text-xs sm:text-sm leading-relaxed mb-3 sm:mb-4">
-                    Kini Nagari Muaro memiliki <strong>SintaAI</strong> yang siap membantu warga
+                    Kini {tenantName} memiliki <strong>SintaAI</strong> yang siap membantu warga
                     untuk mendapatkan informasi layanan, mengajukan pertanyaan, atau melaporkan keluhan
                     <strong> 24/7</strong>.
                   </p>

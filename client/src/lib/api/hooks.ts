@@ -13,6 +13,11 @@ import type {
   Category,
   DataOverview,
   NagariProfile,
+  NagariStats,
+  KeuanganNagariData,
+  VisitorStatsData,
+  PublicSurveySummary,
+  IndeksDesaResponse,
   Jorong,
   WebGISData,
   Project,
@@ -22,14 +27,30 @@ import type {
   PaginatedResponse,
 } from "./types";
 
-// Generic fetch function with tenant header
-async function fetchApi<T>(url: string): Promise<T> {
-  const response = await fetch(url, {
-    headers: {
-      'X-Tenant-ID': '1',  // Default tenant ID for Nagari Portal
-      'Accept': 'application/json',
+// Helper to get default tenant headers for Nagari Portal
+export function getTenantHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Accept': 'application/json',
+  };
+
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    headers['X-Tenant-Domain'] = hostname;
+
+    // Check if there is an explicit tenant override
+    const storedTenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenantId');
+    if (storedTenantId) {
+      headers['X-Tenant-ID'] = storedTenantId;
     }
-  });
+  }
+
+  return headers;
+}
+
+// Generic fetch function with dynamic tenant header
+async function fetchApi<T>(url: string): Promise<T> {
+  const headers = getTenantHeaders();
+  const response = await fetch(url, { headers });
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
@@ -143,8 +164,75 @@ export function useNagariProfile() {
 export function useNagariStats(year?: number) {
   return useQuery({
     queryKey: ["nagari-stats", year],
-    queryFn: () => fetchApi<ApiResponse<any>>(`${PUBLIC_API.NAGARI_STATS}${year ? `?year=${year}` : ""}`),
+    queryFn: () => fetchApi<ApiResponse<NagariStats | null>>(`${PUBLIC_API.NAGARI_STATS}${year ? `?year=${year}` : ""}`),
     staleTime: 1000 * 60 * 10, // 10 minutes
+  });
+}
+
+// Keuangan Nagari (APB)
+export function useKeuanganNagari(year?: number) {
+  return useQuery({
+    queryKey: ["keuangan-nagari", year],
+    queryFn: () => fetchApi<ApiResponse<KeuanganNagariData | null>>(`${PUBLIC_API.KEUANGAN}${year ? `?year=${year}` : ""}`),
+    staleTime: 1000 * 60 * 10, // 10 minutes
+  });
+}
+
+// Public Visitor Statistics (Umami per tenant)
+export function useVisitorStats() {
+  return useQuery({
+    queryKey: ["visitor-stats"],
+    queryFn: () => fetchApi<ApiResponse<VisitorStatsData | null>>(PUBLIC_API.VISITOR_STATS),
+    staleTime: 1000 * 60 * 2, // 2 minutes
+    refetchInterval: 1000 * 60 * 2,
+    retry: 1,
+  });
+}
+
+// Public IKM Survey Summary (tenant-isolated)
+export function useSurveySummary() {
+  return useQuery({
+    queryKey: ["public-survey-summary"],
+    queryFn: () => fetchApi<ApiResponse<PublicSurveySummary>>(PUBLIC_API.SURVEY_SUMMARY),
+    staleTime: 1000 * 60 * 3,
+  });
+}
+
+// Public Indeks Desa / IDM (tenant-isolated)
+export function useIndeksDesa(year?: number) {
+  return useQuery({
+    queryKey: ["indeks-desa", year],
+    queryFn: () =>
+      fetchApi<ApiResponse<IndeksDesaResponse>>(
+        `${PUBLIC_API.INDEKS_DESA}${year ? `?year=${year}` : ""}`
+      ),
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+// Submit Public IKM Survey (tenant-isolated)
+export function useSubmitSurvey() {
+  return useMutation({
+    mutationFn: async (payload: {
+      rating: number;
+      category?: string;
+      comment?: string;
+      page_path?: string;
+    }) => {
+      const response = await fetch(PUBLIC_API.SURVEY_SUBMIT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getTenantHeaders(),
+        },
+        body: JSON.stringify(payload),
+      });
+      const json = await response.json();
+      if (!response.ok) {
+        throw new Error(json?.message || "Gagal mengirim penilaian.");
+      }
+      return json as ApiResponse<PublicSurveySummary>;
+    },
   });
 }
 
@@ -167,10 +255,24 @@ export function useWebGIS() {
 }
 
 // Projects
-export function useProjects(page = 1) {
+export function useProjects(
+  page = 1,
+  options?: { status?: string; perPage?: number }
+) {
+  const params = new URLSearchParams({ page: String(page) });
+  if (options?.status) params.set("status", options.status);
+  if (options?.perPage) params.set("per_page", String(options.perPage));
   return useQuery({
-    queryKey: ["projects", page],
-    queryFn: () => fetchApi<ApiResponse<PaginatedResponse<Project>>>(`${PUBLIC_API.PROJECTS}?page=${page}`),
+    queryKey: [
+      "projects",
+      page,
+      options?.status ?? "default",
+      options?.perPage ?? 10,
+    ],
+    queryFn: () =>
+      fetchApi<ApiResponse<PaginatedResponse<Project>>>(
+        `${PUBLIC_API.PROJECTS}?${params.toString()}`
+      ),
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
@@ -271,6 +373,7 @@ export function useSubmitComplaint() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...getTenantHeaders(),
         },
         body: JSON.stringify(data),
       });
@@ -290,6 +393,7 @@ export function useSubmitPelayanan() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...getTenantHeaders(),
         },
         body: JSON.stringify(data),
       });
@@ -327,6 +431,7 @@ export function useSubmitUMKM() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...getTenantHeaders(),
         },
         body: JSON.stringify(data),
       });

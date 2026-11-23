@@ -1,174 +1,284 @@
-import { motion } from "framer-motion";
-import { 
-  MapPin, Phone, Mail, Send, MessageCircle, Loader2
+import { useState } from "react";
+import {
+  MapPin, Phone, Mail, Send, MessageCircle, Loader2, ExternalLink
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Card, CardContent 
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useSiteSettings } from "@/lib/api";
+import { getTenantWhatsAppNumber } from "@/lib/whatsapp";
+import { Link } from "wouter";
 import PageHeader from "@/components/layout/PageHeader";
 import PageBackground from "@/components/layout/PageBackground";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import EmergencyContactsSection from "@/components/shared/EmergencyContactsSection";
 import contactImage from "@assets/generated_images/hero_background_of_nagari_sungai_pinang.png";
 
 export default function Contact() {
   const { data: settingsData, isLoading } = useSiteSettings();
   const settings = settingsData?.data;
+  const whatsappNumber = getTenantWhatsAppNumber(settings);
 
-  // Use field names that match the API response
+  const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
+  const [errors, setErrors] = useState<Partial<typeof form>>({});
+  const [statusMessage, setStatusMessage] = useState<string>("");
+
   const contactInfo = {
     address: settings?.contact_address || "Kantor Wali Nagari",
-    phone: settings?.contact_phone || "+62 751 123456",
-    email: settings?.contact_email || "nagari@example.go.id",
-    whatsapp: settings?.contact_whatsapp || settings?.whatsapp || null
+    phone: settings?.contact_phone || "",
+    email: settings?.contact_email || "",
   };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const nextErrors: Partial<typeof form> = {};
+    if (!form.name.trim()) nextErrors.name = "Tuliskan nama lengkap Anda.";
+    if (!form.subject.trim()) nextErrors.subject = "Tuliskan perihal pesan Anda.";
+    if (!form.message.trim()) nextErrors.message = "Tuliskan isi pesan atau pertanyaan Anda.";
+    if (form.email.trim() && !form.email.includes("@")) {
+      nextErrors.email = "Tuliskan alamat email yang valid (mengandung @).";
+    }
+
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      setStatusMessage("Mohon lengkapi kolom yang ditandai sebelum mengirim.");
+      return;
+    }
+
+    const composedBody = [
+      `Nama: ${form.name.trim()}`,
+      form.email.trim() ? `Email: ${form.email.trim()}` : null,
+      `Perihal: ${form.subject.trim()}`,
+      "",
+      form.message.trim(),
+    ].filter(Boolean).join("\n");
+
+    if (whatsappNumber) {
+      window.open(
+        `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(composedBody)}`,
+        "_blank",
+        "noopener,noreferrer"
+      );
+      setStatusMessage("Jendela WhatsApp resmi nagari dibuka untuk mengirim pesan Anda.");
+    } else if (contactInfo.email) {
+      window.location.href = `mailto:${contactInfo.email}?subject=${encodeURIComponent(form.subject.trim())}&body=${encodeURIComponent(composedBody)}`;
+      setStatusMessage("Aplikasi email Anda dibuka untuk mengirim pesan ke kantor nagari.");
+    } else {
+      setStatusMessage("Kontak digital nagari belum dikonfigurasi. Silakan kunjungi Kantor Wali Nagari.");
+    }
+  };
+
+  const mapsSearchUrl = settings?.contact_address
+    ? `https://www.openstreetmap.org/search?query=${encodeURIComponent(settings.contact_address)}`
+    : null;
 
   return (
     <PageBackground>
       <Navbar />
-      <PageHeader 
-        title="Hubungi Kami" 
-        description="Kami siap melayani Anda. Silakan hubungi kami melalui kontak di bawah ini atau kunjungi kantor kami."
+      <PageHeader
+        title="Hubungi Kami"
+        description="Sampaikan pertanyaan, keperluan administrasi, atau masukan melalui kontak resmi Kantor Wali Nagari."
         image={contactImage}
       />
-      
-      <div className="container mx-auto px-4 py-16 md:py-24 relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+
+      <div className="container mx-auto px-4 md:px-6 py-12 md:py-16 space-y-16">
+        <EmergencyContactsSection />
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12 items-start">
           {/* Contact Info */}
-          <motion.div 
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
-            className="space-y-10"
-          >
+          <div className="space-y-8">
             <div>
-              <div className="inline-flex items-center gap-2 text-teal-600 dark:text-[#3fd5ba] font-bold uppercase tracking-[0.2em] text-[10px] mb-6 border border-teal-300 dark:border-[#3fd5ba]/20 bg-teal-600/5 dark:bg-[#3fd5ba]/5 px-4 py-2 rounded-full shadow-[0_0_15px_rgba(63,213,186,0.1)]">
-                <MessageCircle size={14} />
-                <span>Pusat Layanan Terpadu</span>
-              </div>
-              <h2 className="text-3xl md:text-5xl font-serif font-bold text-slate-800 dark:text-white mb-6 leading-tight drop-shadow-md">
-                Layanan Informasi & <br/>
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#3fd5ba] to-blue-400">Pengaduan Masyarakat</span>
+              <p className="inline-flex items-center gap-2 text-nagari-red-ink font-medium text-[13px] mb-3">
+                <MessageCircle aria-hidden="true" size={15} />
+                Pusat Layanan Informasi
+              </p>
+              <h2 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-4 leading-tight">
+                Kontak Resmi Kantor Nagari
               </h2>
-              <p className="text-slate-600 dark:text-white/60 font-light leading-relaxed text-lg max-w-md">
-                Jangan ragu menghubungi kami. Kami berkomitmen memberikan pelayanan prima secara langsung maupun digital.
+              <p className="text-muted-foreground leading-relaxed text-base max-w-lg">
+                Anda dapat menghubungi perangkat nagari melalui saluran di bawah ini atau datang langsung pada jam operasional kantor.
               </p>
             </div>
 
             {isLoading ? (
               <div className="flex items-center gap-3 py-8">
-                <Loader2 className="w-5 h-5 animate-spin text-teal-600 dark:text-[#3fd5ba]" />
-                <span className="text-slate-600 dark:text-white/40 uppercase tracking-widest text-xs font-bold">Memuat data kontak...</span>
+                <Loader2 aria-hidden="true" className="w-5 h-5 animate-spin text-nagari-red" />
+                <span className="text-muted-foreground text-sm font-medium">Memuat data kontak...</span>
               </div>
             ) : (
-              <div className="grid gap-6">
-                {[
-                  { icon: MapPin, title: "Alamat Kantor", content: contactInfo.address, detail: "Buka: Senin - Jumat (08:00 - 16:00)" },
-                  { icon: Phone, title: "Telepon & WhatsApp", content: contactInfo.phone, detail: "Layanan 24 Jam via WhatsApp" },
-                  { icon: Mail, title: "Email Resmi", content: contactInfo.email, detail: "Untuk keperluan administrasi & kerjasama" }
-                ].map((item, index) => (
-                  <motion.div
-                    key={index}
-                    whileHover={{ y: -5, x: 5 }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                  >
-                    <Card className="border-black/5 dark:border-white/10 shadow-lg bg-white/80 dark:bg-[#0b2023]/60 backdrop-blur-md overflow-hidden relative group">
-                      <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-bl-full group-hover:bg-teal-600/10 dark:bg-[#3fd5ba]/10 transition-colors" />
-                      <CardContent className="p-6 md:p-8 flex items-start gap-5 relative z-10 text-slate-800 dark:text-white cursor-pointer">
-                        <div className="w-14 h-14 rounded-2xl bg-[#143236] text-teal-600 dark:text-[#3fd5ba] flex items-center justify-center shrink-0 border border-black/5 dark:border-white/5 group-hover:bg-teal-500 dark:bg-[#3fd5ba] group-hover:text-white dark:text-[#0a1a1c] group-hover:shadow-md dark:shadow-[0_0_15px_rgba(63,213,186,0.5)] transition-all duration-300">
-                          <item.icon size={26} strokeWidth={1.5} />
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-slate-600 dark:text-white/90 text-lg mb-2">{item.title}</h3>
-                          <p className="text-teal-600 dark:text-[#3fd5ba] tracking-wide font-medium leading-relaxed mb-2 break-all">
-                            {item.content}
-                          </p>
-                          <p className="text-[10px] text-slate-600 dark:text-white/40 uppercase tracking-widest font-bold">{item.detail}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
+              <div className="grid gap-4">
+                <Card className="border-border bg-card rounded-2xl">
+                  <CardContent className="p-5 flex items-start gap-4">
+                    <div className="w-11 h-11 rounded-xl bg-nagari-red/10 text-nagari-red-ink flex items-center justify-center shrink-0">
+                      <MapPin aria-hidden="true" size={20} />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-foreground text-base mb-1">Alamat Kantor</h3>
+                      <p className="text-foreground/90 text-sm leading-relaxed mb-1">{contactInfo.address}</p>
+                      <p className="text-[13px] text-muted-foreground">Senin – Kamis (08:00 – 16:00), Jumat (08:00 – 11:30)</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {contactInfo.phone && (
+                  <Card className="border-border bg-card rounded-2xl">
+                    <CardContent className="p-5 flex items-start gap-4">
+                      <div className="w-11 h-11 rounded-xl bg-nagari-red/10 text-nagari-red-ink flex items-center justify-center shrink-0">
+                        <Phone aria-hidden="true" size={20} />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-foreground text-base mb-1">Telepon &amp; WhatsApp</h3>
+                        <a href={`tel:${contactInfo.phone}`} className="text-nagari-red-ink font-medium text-sm hover:underline underline-offset-4">
+                          {contactInfo.phone}
+                        </a>
+                        <p className="text-[13px] text-muted-foreground mt-1">Saluran informasi dan layanan nagari</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {contactInfo.email && (
+                  <Card className="border-border bg-card rounded-2xl">
+                    <CardContent className="p-5 flex items-start gap-4">
+                      <div className="w-11 h-11 rounded-xl bg-nagari-red/10 text-nagari-red-ink flex items-center justify-center shrink-0">
+                        <Mail aria-hidden="true" size={20} />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-foreground text-base mb-1">Email Resmi</h3>
+                        <a href={`mailto:${contactInfo.email}`} className="text-nagari-red-ink font-medium text-sm hover:underline underline-offset-4 break-all">
+                          {contactInfo.email}
+                        </a>
+                        <p className="text-[13px] text-muted-foreground mt-1">Untuk surat menyurat dan kerja sama</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                <div className="flex flex-wrap gap-3 pt-2">
+                  <Link href="/gis">
+                    <Button variant="outline" className="rounded-lg h-11 px-5 text-sm font-medium border-border text-foreground hover:bg-muted">
+                      <MapPin aria-hidden="true" className="mr-2 h-4 w-4" /> Lihat Peta Wilayah Nagari
+                    </Button>
+                  </Link>
+                  {mapsSearchUrl && (
+                    <Button asChild variant="outline" className="rounded-lg h-11 px-5 text-sm font-medium border-border text-foreground hover:bg-muted">
+                      <a href={mapsSearchUrl} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink aria-hidden="true" className="mr-2 h-4 w-4" /> Buka di Peta
+                      </a>
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
-          </motion.div>
+          </div>
 
           {/* Contact Form */}
-          <motion.div 
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="bg-white/80 dark:bg-[#0b2023]/60 backdrop-blur-xl p-8 md:p-12 rounded-[2.5rem] shadow-2xl border border-black/5 dark:border-white/10 relative overflow-hidden h-fit"
-          >
-            <div className="absolute -top-10 -right-10 w-40 h-40 bg-teal-600/10 dark:bg-[#3fd5ba]/10 rounded-full blur-[60px] pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-40 h-40 bg-blue-500/10 rounded-full blur-[60px] pointer-events-none" />
-            
-            <h2 className="text-3xl font-serif font-bold text-slate-800 dark:text-white mb-3 relative z-10">Kirim Pesan</h2>
-            <p className="text-slate-600 dark:text-white/50 text-sm font-light mb-10 relative z-10 pb-6 border-b border-black/5 dark:border-white/10">Isi formulir, tim administrator Nagari akan merespon secepatnya.</p>
-            
-            <form className="space-y-6 relative z-10" onSubmit={(e) => { e.preventDefault(); alert("Pesan kontak UI berhasil dipicu. Integrasikan backend jika perlu."); }}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-slate-600 dark:text-white/50 uppercase tracking-widest">Nama Lengkap</label>
-                  <Input placeholder="Identitas pengirim" className="rounded-xl bg-white/5 border-black/5 dark:border-white/10 h-12 text-slate-800 dark:text-white placeholder:text-slate-600 dark:text-white/20 focus:bg-white/10 focus:border-teal-300 dark:border-[#3fd5ba]/50 transition-all font-light" />
-                </div>
-                <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-slate-600 dark:text-white/50 uppercase tracking-widest">Alamat Email</label>
-                  <Input type="email" placeholder="email@anda.com" className="rounded-xl bg-white/5 border-black/5 dark:border-white/10 h-12 text-slate-800 dark:text-white placeholder:text-slate-600 dark:text-white/20 focus:bg-white/10 focus:border-teal-300 dark:border-[#3fd5ba]/50 transition-all font-light" />
-                </div>
-              </div>
-              
-              <div className="space-y-3">
-                <label className="text-[10px] font-bold text-slate-600 dark:text-white/50 uppercase tracking-widest">Topik Bahasan</label>
-                <Input placeholder="Perihal..." className="rounded-xl bg-white/5 border-black/5 dark:border-white/10 h-12 text-slate-800 dark:text-white placeholder:text-slate-600 dark:text-white/20 focus:bg-white/10 focus:border-teal-300 dark:border-[#3fd5ba]/50 transition-all font-light" />
-              </div>
+          <Card className="bg-card border border-border rounded-2xl">
+            <CardContent className="p-6 md:p-8">
+              <h2 className="text-2xl font-serif font-bold text-foreground mb-2">Kirim Pesan</h2>
+              <p className="text-muted-foreground text-sm mb-6 pb-5 border-b border-border">
+                Isi formulir berikut untuk mengirim pesan langsung ke saluran resmi Kantor Wali Nagari.
+              </p>
 
-              <div className="space-y-3">
-                <label className="text-[10px] font-bold text-teal-600 dark:text-[#3fd5ba] uppercase tracking-widest">Isi Pesan / Pertanyaan</label>
-                <Textarea placeholder="Tuliskan detail pertanyaan atau saran Anda di sini..." className="min-h-[160px] rounded-xl bg-white/5 border-black/5 dark:border-white/10 p-4 text-slate-800 dark:text-white placeholder:text-slate-600 dark:text-white/20 focus:bg-white/10 focus:border-teal-300 dark:border-[#3fd5ba]/50 transition-all resize-none font-light" />
-              </div>
+              <form className="space-y-5" onSubmit={handleSubmit} noValidate>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label htmlFor="contact-name" className="text-sm font-medium text-foreground block">
+                      Nama Lengkap
+                    </label>
+                    <Input
+                      id="contact-name"
+                      autoComplete="name"
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      aria-invalid={Boolean(errors.name)}
+                      aria-describedby={errors.name ? "contact-name-error" : undefined}
+                      placeholder="Nama Anda"
+                      className="rounded-lg h-12 text-base"
+                    />
+                    {errors.name && (
+                      <p id="contact-name-error" className="text-[13px] text-nagari-red-ink">{errors.name}</p>
+                    )}
+                  </div>
 
-              <Button type="submit" className="w-full bg-teal-500 dark:bg-[#3fd5ba] hover:bg-teal-600 dark:hover:bg-white text-white dark:text-[#0a1a1c] h-14 font-bold uppercase tracking-widest text-sm rounded-xl shadow-[0_0_20px_rgba(63,213,186,0.3)] transition-all mt-4 hover:-translate-y-1">
-                <Send className="mr-2 h-5 w-5" /> Kirim Pesan via Email
-              </Button>
-            </form>
-          </motion.div>
+                  <div className="space-y-2">
+                    <label htmlFor="contact-email" className="text-sm font-medium text-foreground block">
+                      Alamat Email (opsional)
+                    </label>
+                    <Input
+                      id="contact-email"
+                      type="email"
+                      autoComplete="email"
+                      value={form.email}
+                      onChange={(e) => setForm({ ...form, email: e.target.value })}
+                      aria-invalid={Boolean(errors.email)}
+                      aria-describedby={errors.email ? "contact-email-error" : undefined}
+                      placeholder="nama@email.com"
+                      className="rounded-lg h-12 text-base"
+                    />
+                    {errors.email && (
+                      <p id="contact-email-error" className="text-[13px] text-nagari-red-ink">{errors.email}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="contact-subject" className="text-sm font-medium text-foreground block">
+                    Perihal
+                  </label>
+                  <Input
+                    id="contact-subject"
+                    value={form.subject}
+                    onChange={(e) => setForm({ ...form, subject: e.target.value })}
+                    aria-invalid={Boolean(errors.subject)}
+                    aria-describedby={errors.subject ? "contact-subject-error" : undefined}
+                    placeholder="Contoh: Pertanyaan syarat surat domisili"
+                    className="rounded-lg h-12 text-base"
+                  />
+                  {errors.subject && (
+                    <p id="contact-subject-error" className="text-[13px] text-nagari-red-ink">{errors.subject}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="contact-message" className="text-sm font-medium text-foreground block">
+                    Isi Pesan
+                  </label>
+                  <Textarea
+                    id="contact-message"
+                    value={form.message}
+                    onChange={(e) => setForm({ ...form, message: e.target.value })}
+                    aria-invalid={Boolean(errors.message)}
+                    aria-describedby={errors.message ? "contact-message-error" : undefined}
+                    placeholder="Tuliskan pertanyaan atau saran Anda di sini..."
+                    className="min-h-[140px] rounded-lg p-3.5 text-base resize-y"
+                  />
+                  {errors.message && (
+                    <p id="contact-message-error" className="text-[13px] text-nagari-red-ink">{errors.message}</p>
+                  )}
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full bg-nagari-red hover:bg-nagari-red-ink text-white h-12 font-medium text-sm rounded-lg transition-colors"
+                >
+                  <Send aria-hidden="true" className="mr-2 h-4 w-4" />
+                  {whatsappNumber ? "Kirim Pesan via WhatsApp" : "Kirim Pesan via Email"}
+                </Button>
+
+                {statusMessage && (
+                  <p role="status" className="text-sm text-muted-foreground pt-1">
+                    {statusMessage}
+                  </p>
+                )}
+              </form>
+            </CardContent>
+          </Card>
         </div>
-
-        {/* Map */}
-        <motion.div 
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8 }}
-          className="mt-24 rounded-[2.5rem] overflow-hidden shadow-2xl h-[500px] border border-black/5 dark:border-white/10 relative group"
-        >
-          {/* Map Overlay to dark mode the iframe effectively */}
-          <div className="absolute inset-0 bg-slate-50/90 dark:bg-[#0a1a1c]/60 mix-blend-color pointer-events-none z-10" />
-          <div className="absolute inset-0 bg-blue-900/10 mix-blend-overlay pointer-events-none z-10" />
-          
-          <iframe 
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d127669.96919056463!2d100.3551061!3d-0.9345797!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2fd4b942e2b117bb%3A0xb8468cb5c3046ba5!2sPadang%2C%20Padang%20City%2C%20West%20Sumatra!5e0!3m2!1sen!2sid!4v1709823456789!5m2!1sen!2sid" 
-            width="100%" 
-            height="100%" 
-            style={{ border: 0 }} 
-            allowFullScreen 
-            loading="lazy" 
-            referrerPolicy="no-referrer-when-downgrade"
-            className="filter grayscale-[80%] contrast-[1.2]"
-          ></iframe>
-          
-          <div className="absolute bottom-8 left-8 z-20">
-             <Button variant="outline" className="shadow-[0_0_20px_rgba(0,0,0,0.5)] font-bold bg-white/80 dark:bg-[#0b2023]/80 backdrop-blur-md border border-black/5 dark:border-white/20 text-slate-800 dark:text-white hover:bg-teal-500 dark:bg-[#3fd5ba] hover:text-white dark:text-[#0a1a1c] hover:border-teal-300 dark:border-[#3fd5ba] rounded-full px-6 h-12 uppercase tracking-widest text-[10px]">
-                <MapPin className="mr-2 h-4 w-4" /> Buka Google Maps
-             </Button>
-          </div>
-        </motion.div>
       </div>
+
       <Footer />
     </PageBackground>
   );

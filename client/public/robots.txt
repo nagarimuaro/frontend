@@ -1,0 +1,12 @@
+# Portal Nagari — crawler rules
+# Public information portal: everything indexable except letter-verification
+# URLs, which carry a per-document token and are not public content.
+
+User-agent: *
+Allow: /
+Disallow: /verifikasi-surat/
+
+# The Sitemap line is intentionally absent: it requires an absolute URL and the
+# production host is not fixed in this repo. Add it once the domain is final:
+#   Sitemap: https://<domain>/sitemap.xml
+# The sitemap generator is wired in vite.config.ts and runs when SITE_URL is set.

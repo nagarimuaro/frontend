@@ -1,403 +1,1384 @@
-import { motion } from "framer-motion";
-import { 
-  Users, BarChart3, PieChart, TrendingUp, Building2, Map, ArrowUpRight, Loader2 
+import { useState, useEffect, useMemo, useRef } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import {
+  Users,
+  Building2,
+  Map as MapIcon,
+  TrendingUp,
+  Loader2,
+  BarChart3,
+  ChevronRight,
+  Wallet,
+  GraduationCap,
+  Briefcase,
+  PieChart as PieChartIcon,
+  ArrowUpRight,
 } from "lucide-react";
-import { 
-  Card, CardContent, CardTitle, CardDescription 
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useDataOverview, useNagariStats, useNagariProfile } from "@/lib/api";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+} from "recharts";
+import { Link } from "wouter";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  useDataOverview,
+  useNagariStats,
+  useNagariProfile,
+  useKeuanganNagari,
+} from "@/lib/api";
+import { accentByIndex } from "@/lib/accents";
 import PageHeader from "@/components/layout/PageHeader";
 import PageBackground from "@/components/layout/PageBackground";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import statsImage from "@assets/generated_images/digital_map_of_village.png"; // Placeholder
+import statsImage from "@assets/generated_images/digital_map_of_village.png";
+
+type TabId = "population" | "education" | "jobs" | "budget";
+
+const TABS: Array<{
+  id: TabId;
+  label: string;
+  icon: React.ComponentType<{ size?: number; "aria-hidden"?: boolean }>;
+}> = [
+  { id: "population", label: "Demografi Penduduk", icon: Users },
+  { id: "education", label: "Tingkat Pendidikan", icon: GraduationCap },
+  { id: "jobs", label: "Profesi & Pekerjaan", icon: Briefcase },
+  { id: "budget", label: "Transparansi APB", icon: Wallet },
+];
+
+// Calibrated categorical hex palette matching --cat-1..6 (no purple/neon)
+const CHART_HEX = [
+  "#1d8680", // teal
+  "#24599e", // blue
+  "#237153", // moss
+  "#976316", // ochre
+  "#a33b29", // terracotta
+  "#37539f", // slate-blue
+];
+
+const EASE_UI: [number, number, number, number] = [0.2, 0.8, 0.2, 1];
+const EASE_ENTER: [number, number, number, number] = [0.22, 1, 0.36, 1];
+
+const formatRupiah = (amount: number) =>
+  new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(amount);
+
+const formatCompactRupiah = (amount: number) => {
+  if (amount >= 1_000_000_000) {
+    return `Rp ${(amount / 1_000_000_000).toLocaleString("id-ID", {
+      maximumFractionDigits: 2,
+    })} M`;
+  }
+  if (amount >= 1_000_000) {
+    return `Rp ${(amount / 1_000_000).toLocaleString("id-ID", {
+      maximumFractionDigits: 1,
+    })} Jt`;
+  }
+  return formatRupiah(amount);
+};
+
+function useCountUp(target: number, disabled: boolean, durationMs = 700): number {
+  const [value, setValue] = useState(disabled ? target : 0);
+
+  useEffect(() => {
+    if (disabled || target <= 0) {
+      setValue(target);
+      return;
+    }
+
+    let rafId = 0;
+    const start = performance.now();
+
+    const step = (now: number) => {
+      const progress = Math.min(1, (now - start) / durationMs);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.round(target * eased));
+      if (progress < 1) {
+        rafId = requestAnimationFrame(step);
+      } else {
+        setValue(target);
+      }
+    };
+
+    rafId = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(rafId);
+  }, [target, disabled, durationMs]);
+
+  return value;
+}
 
 export default function PublicData() {
+  const prefersReducedMotion = Boolean(useReducedMotion());
+  const [activeTab, setActiveTab] = useState<TabId>("population");
+  const [hoveredGender, setHoveredGender] = useState<number | null>(null);
+  const [hoveredEdu, setHoveredEdu] = useState<string | null>(null);
+  const [hoveredJob, setHoveredJob] = useState<string | null>(null);
+  const [hoveredExpense, setHoveredExpense] = useState<number | null>(null);
+  const tabsRef = useRef<HTMLDivElement | null>(null);
+
   const { data: overviewResponse, isLoading: loadingOverview } = useDataOverview();
   const { data: statsResponse, isLoading: loadingStats } = useNagariStats();
   const { data: profileResponse, isLoading: loadingProfile } = useNagariProfile();
+  const { data: keuanganResponse, isLoading: loadingKeuangan } = useKeuanganNagari();
 
   const overview = overviewResponse?.data;
   const stats = statsResponse?.data;
   const profile = profileResponse?.data;
+  const keuangan = keuanganResponse?.data;
 
-  const isLoading = loadingOverview || loadingStats || loadingProfile;
+  const isLoading = loadingOverview || loadingStats || loadingProfile || loadingKeuangan;
 
-  // Use data from API - field names match backend response
-  const population = {
-    total: overview?.jumlah_penduduk || 0,
-    male: overview?.jumlah_laki_laki || 0,
-    female: overview?.jumlah_perempuan || 0,
-    families: overview?.jumlah_kk || 0
+  const male = Number(stats?.jumlah_laki_laki || overview?.jumlah_laki_laki || 0);
+  const female = Number(stats?.jumlah_perempuan || overview?.jumlah_perempuan || 0);
+  const genderSum = male + female;
+  const totalPopulation = Number(
+    stats?.jumlah_penduduk || overview?.jumlah_penduduk || genderSum || 0
+  );
+  const families = Number(overview?.jumlah_kk || stats?.jumlah_kk || 0);
+
+  const genderBase = genderSum > 0 ? genderSum : totalPopulation;
+  const malePercent =
+    genderBase > 0 ? Number(((male / genderBase) * 100).toFixed(1)) : 0;
+  const femalePercent =
+    genderBase > 0 ? Number(((female / genderBase) * 100).toFixed(1)) : 0;
+  const sexRatio = female > 0 ? Math.round((male / female) * 100) : null;
+
+  const avgHousehold =
+    families > 0 && totalPopulation > 0
+      ? (totalPopulation / families).toLocaleString("id-ID", {
+          maximumFractionDigits: 1,
+        })
+      : null;
+
+  const areaSizeRaw = profile?.luas_wilayah || overview?.luas_wilayah || null;
+  const areaNumeric = areaSizeRaw
+    ? parseFloat(String(areaSizeRaw).replace(",", ".").replace(/[^0-9.]/g, ""))
+    : NaN;
+  const density =
+    Number.isFinite(areaNumeric) && areaNumeric > 0 && totalPopulation > 0
+      ? Math.round(totalPopulation / areaNumeric)
+      : null;
+
+  const education = Array.isArray(stats?.education) ? stats.education : [];
+  const jobs = Array.isArray(stats?.jobs) ? stats.jobs : [];
+  const ageGroups = Array.isArray(stats?.age_groups) ? stats.age_groups : [];
+
+  const rawBudget = Number(
+    keuangan?.totalBelanja ||
+      keuangan?.totalIncome ||
+      overview?.total_anggaran ||
+      overview?.total_belanja ||
+      overview?.total_pendapatan ||
+      0
+  );
+  const budgetYear = keuangan?.year || overview?.tahun_anggaran || overview?.tahun;
+  const budgetLabel = rawBudget > 0 ? formatCompactRupiah(rawBudget) : "—";
+
+  const animatedPopulation = useCountUp(totalPopulation, prefersReducedMotion);
+  const animatedFamilies = useCountUp(families, prefersReducedMotion);
+
+  // Derived real insights
+  const genderChartData = useMemo(
+    () => [
+      { name: "Laki-laki", value: male, percent: malePercent, color: CHART_HEX[1] },
+      { name: "Perempuan", value: female, percent: femalePercent, color: CHART_HEX[0] },
+    ],
+    [male, female, malePercent, femalePercent]
+  );
+
+  const ageInsights = useMemo(() => {
+    if (ageGroups.length === 0) return { dominant: null, productivePercent: null };
+    const dominant = [...ageGroups].sort((a, b) => b.count - a.count)[0] ?? null;
+    const productive = ageGroups
+      .filter((g) => /18|36|dewasa|produktif/i.test(g.label))
+      .reduce((acc, g) => acc + Number(g.value || 0), 0);
+    return {
+      dominant,
+      productivePercent: productive > 0 ? Number(productive.toFixed(1)) : null,
+    };
+  }, [ageGroups]);
+
+  const eduInsights = useMemo(() => {
+    if (education.length === 0) {
+      return { top: null, higherEdCount: 0, higherEdPercent: 0, totalCount: 0, maxVal: 100 };
+    }
+    const totalCount = education.reduce((acc, item) => acc + (item.count || 0), 0);
+    const higherEdCount = education
+      .filter((item) => /diploma|strata|sarjana|akademi|s1|s2|s3/i.test(item.name))
+      .reduce((acc, item) => acc + (item.count || 0), 0);
+    const higherEdPercent =
+      totalCount > 0 ? Number(((higherEdCount / totalCount) * 100).toFixed(1)) : 0;
+    const maxVal = Math.max(...education.map((i) => Number(i.value || 0)), 1);
+    return {
+      top: education[0],
+      higherEdCount,
+      higherEdPercent,
+      totalCount,
+      maxVal,
+    };
+  }, [education]);
+
+  const jobSegments = useMemo(() => {
+    if (jobs.length === 0) return [];
+    const topFive = jobs.slice(0, 5).map((item, idx) => ({
+      name: item.name,
+      value: item.value,
+      count: item.count,
+      hex: CHART_HEX[idx % CHART_HEX.length],
+      edgeClass: accentByIndex(idx).edge,
+    }));
+    const rest = jobs.slice(5);
+    const restVal = Number(
+      rest.reduce((acc, item) => acc + Number(item.value || 0), 0).toFixed(1)
+    );
+    const restCount = rest.reduce((acc, item) => acc + Number(item.count || 0), 0);
+    if (restVal > 0) {
+      topFive.push({
+        name: "Profesi Lainnya",
+        value: restVal,
+        count: restCount,
+        hex: CHART_HEX[5],
+        edgeClass: accentByIndex(5).edge,
+      });
+    }
+    return topFive;
+  }, [jobs]);
+
+  const expenseChartData = useMemo(() => {
+    if (!keuangan?.expenseData) return [];
+    return keuangan.expenseData.map((item, idx) => ({
+      ...item,
+      color: CHART_HEX[idx % CHART_HEX.length],
+    }));
+  }, [keuangan]);
+
+  const handleTabKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, currentIndex: number) => {
+    if (e.key === "ArrowRight") {
+      e.preventDefault();
+      setActiveTab(TABS[(currentIndex + 1) % TABS.length].id);
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      setActiveTab(TABS[(currentIndex - 1 + TABS.length) % TABS.length].id);
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      setActiveTab(TABS[0].id);
+    } else if (e.key === "End") {
+      e.preventDefault();
+      setActiveTab(TABS[TABS.length - 1].id);
+    }
   };
 
-  const education = stats?.education || [
-    { name: "SD/Sederajat", value: 15 },
-    { name: "SMP/Sederajat", value: 25 },
-    { name: "SMA/Sederajat", value: 35 },
-    { name: "Diploma/Sarjana", value: 20 },
-    { name: "Pasca Sarjana", value: 5 },
-  ];
-
-  const jobs = stats?.jobs || [
-    { name: "Petani", value: 45, color: "#22c55e" },
-    { name: "Pedagang", value: 20, color: "#3b82f6" },
-    { name: "PNS/ASN", value: 10, color: "#a855f7" },
-    { name: "Wiraswasta", value: 15, color: "#f97316" },
-    { name: "Lainnya", value: 10, color: "#9ca3af" }, // muted gray for dark mode
-  ];
-
-  const areaSize = profile?.luas_wilayah || overview?.luas_wilayah || "12.5";
-  const budget = overview?.total_anggaran 
-    ? `${(overview.total_anggaran / 1000000000).toFixed(1)} M` 
-    : "1.2 M";
+  const jumpToBudgetTab = () => {
+    setActiveTab("budget");
+    tabsRef.current?.scrollIntoView({ behavior: prefersReducedMotion ? "auto" : "smooth", block: "start" });
+  };
 
   if (isLoading) {
     return (
       <PageBackground>
         <Navbar />
-        <div className="flex items-center justify-center min-h-[60vh] space-x-3">
-          <div className="w-8 h-8 rounded-full border-b-2 border-teal-300 dark:border-[#3fd5ba] animate-spin" />
-          <span className="text-teal-600 dark:text-[#3fd5ba] uppercase tracking-widest text-xs font-bold">Sinkronisasi Data...</span>
+        <div className="flex items-center justify-center min-h-[60vh] gap-3">
+          <Loader2 aria-hidden="true" className="w-7 h-7 text-nagari-red animate-spin" />
+          <span className="text-sm font-medium text-muted-foreground">
+            Memuat data statistik nagari...
+          </span>
         </div>
         <Footer />
       </PageBackground>
     );
   }
 
+  const activeGenderDatum =
+    hoveredGender !== null ? genderChartData[hoveredGender] : null;
+  const activeExpenseDatum =
+    hoveredExpense !== null ? expenseChartData[hoveredExpense] : null;
+
   return (
     <PageBackground>
       <Navbar />
-      <PageHeader 
-        title="Data Publik & Statistik" 
-        description="Dashboard data kependudukan, sosial, dan ekonomi Nagari secara transparan dan akurat yang langsung disinkronisasi dari Database."
+      <PageHeader
+        title="Data Publik & Statistik"
+        description="Statistik kependudukan, pendidikan, mata pencaharian, dan transparansi anggaran yang disinkronisasi langsung dari basis data resmi nagari."
         image={statsImage}
       />
-      
-      <div className="container mx-auto px-4 py-16 md:py-24 relative z-10">
-        {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-20">
-          <StatCard 
-            title="Total Penduduk" 
-            value={population.total.toLocaleString()} 
-            icon={Users} 
-            description="Jiwa"
-            trend="+1.2%"
-            color="text-blue-400"
-            bgColor="bg-blue-500/10"
-            borderColor="border-blue-500/20"
-            glowColor="rgba(59,130,246,0.3)"
-          />
-          <StatCard 
-            title="Kepala Keluarga" 
-            value={population.families.toLocaleString()} 
-            icon={Building2} 
-            description="KK"
-            trend="+0.5%"
-            color="text-purple-400"
-            bgColor="bg-purple-500/10"
-            borderColor="border-purple-500/20"
-            glowColor="rgba(168,85,247,0.3)"
-          />
-          <StatCard 
-            title="Luas Wilayah" 
-            value={areaSize} 
-            icon={Map} 
-            description="km²"
-            trend="Tetap"
-            color="text-teal-600 dark:text-[#3fd5ba]"
-            bgColor="bg-teal-600/10 dark:bg-[#3fd5ba]/10"
-            borderColor="border-teal-300 dark:border-[#3fd5ba]/20"
-            glowColor="rgba(63,213,186,0.3)"
-          />
-          <StatCard 
-            title="Anggaran Nagari" 
-            value={budget} 
-            icon={TrendingUp} 
-            description="Tahun Realisasi"
-            trend="+5%"
-            color="text-amber-400"
-            bgColor="bg-amber-500/10"
-            borderColor="border-amber-500/20"
-            glowColor="rgba(245,158,11,0.3)"
-          />
-        </div>
 
-        <Tabs defaultValue="population" className="space-y-12">
+      <div className="container mx-auto px-4 md:px-6 py-12 md:py-16 space-y-12">
+        {/* Bento Key Metrics */}
+        <section aria-label="Ringkasan angka utama nagari">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* Anchor Navy Card: Total Penduduk + Gender Split */}
+            <motion.div
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, ease: EASE_ENTER }}
+              className="lg:col-span-5 rounded-2xl bg-nagari-navy text-white border border-border p-6 md:p-7 flex flex-col justify-between gap-6"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[13px] font-medium text-nagari-yellow mb-2">
+                    Penduduk Aktif Tercatat
+                  </p>
+                  <div className="flex items-baseline gap-2.5 flex-wrap">
+                    <p className="text-4xl md:text-5xl font-serif font-bold tracking-tight tabular-nums leading-none">
+                      {totalPopulation > 0
+                        ? animatedPopulation.toLocaleString("id-ID")
+                        : "—"}
+                    </p>
+                    {totalPopulation > 0 && (
+                      <span className="text-sm font-medium text-white/75">
+                        Jiwa
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <span className="w-11 h-11 rounded-xl bg-white/10 text-nagari-yellow flex items-center justify-center shrink-0">
+                  <Users aria-hidden="true" size={22} />
+                </span>
+              </div>
+
+              {genderBase > 0 && (
+                <div className="space-y-3 pt-4 border-t border-white/12">
+                  <div
+                    className="h-2.5 w-full rounded-full bg-white/10 overflow-hidden flex gap-0.5"
+                    aria-hidden="true"
+                  >
+                    <motion.div
+                      initial={prefersReducedMotion ? false : { scaleX: 0 }}
+                      animate={{ scaleX: 1 }}
+                      transition={{ duration: 0.65, delay: 0.15, ease: EASE_ENTER }}
+                      style={{
+                        width: `${malePercent}%`,
+                        transformOrigin: "left center",
+                      }}
+                      className="h-full bg-nagari-yellow rounded-l-full"
+                    />
+                    <motion.div
+                      initial={prefersReducedMotion ? false : { scaleX: 0 }}
+                      animate={{ scaleX: 1 }}
+                      transition={{ duration: 0.65, delay: 0.25, ease: EASE_ENTER }}
+                      style={{
+                        width: `${femalePercent}%`,
+                        transformOrigin: "left center",
+                      }}
+                      className="h-full bg-white/70 rounded-r-full"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-4 text-[13px] tabular-nums">
+                    <span className="inline-flex items-center gap-2 text-white/90">
+                      <span
+                        aria-hidden="true"
+                        className="w-2.5 h-2.5 rounded-full bg-nagari-yellow shrink-0"
+                      />
+                      Laki-laki {malePercent}%
+                    </span>
+                    <span className="inline-flex items-center gap-2 text-white/80">
+                      <span
+                        aria-hidden="true"
+                        className="w-2.5 h-2.5 rounded-full bg-white/70 shrink-0"
+                      />
+                      Perempuan {femalePercent}%
+                    </span>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+
+            {/* 3 Complementary KPI Cards */}
+            <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-5">
+              <MetricTile
+                title="Kepala Keluarga"
+                value={families > 0 ? animatedFamilies.toLocaleString("id-ID") : "—"}
+                unit={families > 0 ? "KK" : undefined}
+                caption={avgHousehold ? `Rata-rata ${avgHousehold} jiwa/KK` : undefined}
+                icon={Building2}
+                accentIndex={1}
+                delay={0.06}
+                reducedMotion={prefersReducedMotion}
+              />
+
+              <MetricTile
+                title="Luas Wilayah"
+                value={areaSizeRaw ? String(areaSizeRaw) : "—"}
+                unit={
+                  areaSizeRaw && !String(areaSizeRaw).toLowerCase().includes("km")
+                    ? "km²"
+                    : undefined
+                }
+                caption={
+                  density ? `Kepadatan ~${density.toLocaleString("id-ID")} jiwa/km²` : undefined
+                }
+                icon={MapIcon}
+                accentIndex={2}
+                delay={0.12}
+                reducedMotion={prefersReducedMotion}
+              />
+
+              <MetricTile
+                title="Anggaran Nagari"
+                value={budgetLabel}
+                unit={
+                  rawBudget > 0 ? (budgetYear ? `APB ${budgetYear}` : "APB") : undefined
+                }
+                caption={rawBudget > 0 ? "Lihat rincian APB" : "Belum dipublikasikan"}
+                icon={TrendingUp}
+                accentIndex={3}
+                delay={0.18}
+                reducedMotion={prefersReducedMotion}
+                onClick={rawBudget > 0 ? jumpToBudgetTab : undefined}
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Interactive Tabbed Exploration */}
+        <section ref={tabsRef} className="space-y-8 scroll-mt-24">
           <div className="flex justify-center">
-            <TabsList className="bg-white/80 dark:bg-[#0b2023]/80 backdrop-blur-md border border-black/5 dark:border-white/10 p-1.5 h-auto flex-wrap justify-center gap-2 rounded-2xl shadow-xl">
-                <TabTrigger value="population">Demografi Penduduk</TabTrigger>
-                <TabTrigger value="education">Tingkat Pendidikan</TabTrigger>
-                <TabTrigger value="jobs">Profesi & Pekerjaan</TabTrigger>
-                <TabTrigger value="budget">Realisasi Anggaran</TabTrigger>
-            </TabsList>
+            <div
+              role="tablist"
+              aria-label="Kategori data statistik nagari"
+              className="inline-flex flex-wrap justify-center gap-1.5 p-1.5 rounded-xl bg-card border border-border"
+            >
+              {TABS.map((tab, idx) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    id={`tab-${tab.id}`}
+                    aria-selected={isActive}
+                    aria-controls={`panel-${tab.id}`}
+                    onClick={() => setActiveTab(tab.id)}
+                    onKeyDown={(e) => handleTabKeyDown(e, idx)}
+                    className={`relative px-4 h-11 rounded-lg text-sm font-medium inline-flex items-center gap-2 transition-colors active:scale-[0.985] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-nagari-red ${
+                      isActive
+                        ? "text-white"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {isActive && (
+                      <motion.span
+                        layoutId="public-data-tab-indicator"
+                        transition={
+                          prefersReducedMotion
+                            ? { duration: 0 }
+                            : { duration: 0.24, ease: EASE_UI }
+                        }
+                        className="absolute inset-0 rounded-lg bg-nagari-red"
+                        aria-hidden="true"
+                      />
+                    )}
+                    <span className="relative z-10 inline-flex items-center gap-2">
+                      <Icon aria-hidden={true} size={16} />
+                      {tab.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          <TabsContent value="population">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
-              <Card className="rounded-[2.5rem] bg-white/80 dark:bg-[#0b2023]/60 backdrop-blur-md border border-black/5 dark:border-white/10 shadow-2xl relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] pointer-events-none group-hover:bg-blue-500/10 transition-colors" />
-                <div className="p-8 md:p-10 border-b border-black/5 dark:border-white/5 relative z-10">
-                  <h3 className="font-serif font-bold text-2xl text-slate-800 dark:text-white md:text-3xl mb-2">Komposisi Gender</h3>
-                  <p className="text-slate-600 dark:text-white/40 font-light text-sm">Perbandingan jumlah penduduk Laki-laki dan Perempuan berdasarkan basis data kependudukan.</p>
-                </div>
-                <CardContent className="flex flex-col items-center justify-center p-10 md:p-14 relative z-10">
-                  <div className="flex items-end gap-12 md:gap-24 h-72 w-full justify-center relative">
-                    {/* Grid lines background */}
-                    <div className="absolute inset-0 flex flex-col justify-between opacity-10 pointer-events-none">
-                      {[1,2,3,4,5].map((_, i) => <div key={i} className="w-full h-px border-t border-dashed border-white" />)}
+          <AnimatePresence mode="wait">
+            {/* TAB 1: DEMOGRAFI PENDUDUK */}
+            {activeTab === "population" && (
+              <motion.div
+                key="population"
+                role="tabpanel"
+                id="panel-population"
+                aria-labelledby="tab-population"
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={prefersReducedMotion ? undefined : { opacity: 0, y: -4 }}
+                transition={{ duration: 0.2, ease: EASE_UI }}
+                className="grid grid-cols-1 lg:grid-cols-12 gap-6"
+              >
+                {/* Gender Donut + Interactive Cards */}
+                <Card className="lg:col-span-5 bg-card border border-border rounded-2xl flex flex-col">
+                  <div className="p-6 md:p-7 border-b border-border flex items-start justify-between gap-4">
+                    <div>
+                      <h2 className="font-serif font-bold text-xl md:text-2xl text-foreground">
+                        Komposisi Jenis Kelamin
+                      </h2>
+                      <p className="text-muted-foreground text-sm mt-1">
+                        Arahkan kursor pada grafik untuk menyorot kategori.
+                      </p>
                     </div>
-                    
-                    {/* Male Bar */}
-                    <div className="flex flex-col items-center gap-6 w-28 group/bar cursor-pointer z-10">
-                      <div className="flex flex-col items-center drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">
-                         <span className="font-bold text-4xl text-blue-400 mb-1 leading-none">{population.male.toLocaleString()}</span>
-                         <span className="text-[10px] text-slate-600 dark:text-white/50 font-bold uppercase tracking-[0.2em] mt-2">Jiwa</span>
-                      </div>
-                      <div className="w-full bg-white/5 rounded-2xl relative h-[220px] overflow-hidden border border-black/5 dark:border-white/10 shadow-inner group-hover/bar:border-blue-400/50 group-hover/bar:shadow-[0_0_30px_rgba(59,130,246,0.3)] transition-all">
-                         <motion.div 
-                           initial={{ height: 0 }} 
-                           whileInView={{ height: `${Math.round(population.male / population.total * 100)}%` }} 
-                           viewport={{ once: true }}
-                           transition={{ duration: 2, ease: "easeOut", type: "spring", bounce: 0.2 }}
-                           className="absolute bottom-0 w-full bg-gradient-to-t from-blue-600 via-blue-400 to-cyan-300 rounded-2xl relative overflow-hidden"
-                         >
-                            <div className="absolute inset-x-0 top-0 h-1 bg-white/50 rounded-full" />
-                         </motion.div>
-                      </div>
-                      <div className="flex items-center gap-2 bg-blue-500/20 px-4 py-1.5 rounded-xl border border-blue-500/30 text-blue-300 font-bold text-xs shadow-[0_0_15px_rgba(59,130,246,0.3)] uppercase tracking-wider">
-                        Laki-laki
-                      </div>
-                    </div>
-
-                    {/* Female Bar */}
-                    <div className="flex flex-col items-center gap-6 w-28 group/bar cursor-pointer z-10">
-                      <div className="flex flex-col items-center drop-shadow-[0_0_15px_rgba(244,114,182,0.5)]">
-                         <span className="font-bold text-4xl text-pink-400 mb-1 leading-none">{population.female.toLocaleString()}</span>
-                         <span className="text-[10px] text-slate-600 dark:text-white/50 font-bold uppercase tracking-[0.2em] mt-2">Jiwa</span>
-                      </div>
-                      <div className="w-full bg-white/5 rounded-2xl relative h-[220px] overflow-hidden border border-black/5 dark:border-white/10 shadow-inner group-hover/bar:border-pink-400/50 group-hover/bar:shadow-[0_0_30px_rgba(244,114,182,0.3)] transition-all">
-                        <motion.div 
-                           initial={{ height: 0 }} 
-                           whileInView={{ height: `${Math.round(population.female / population.total * 100)}%` }} 
-                           viewport={{ once: true }}
-                           transition={{ duration: 2, ease: "easeOut", type: "spring", bounce: 0.2, delay: 0.2 }}
-                           className="absolute bottom-0 w-full bg-gradient-to-t from-pink-600 via-pink-400 to-rose-300 rounded-2xl relative overflow-hidden"
-                         >
-                           <div className="absolute inset-x-0 top-0 h-1 bg-white/50 rounded-full" />
-                         </motion.div>
-                      </div>
-                      <div className="flex items-center gap-2 bg-pink-500/20 px-4 py-1.5 rounded-xl border border-pink-500/30 text-pink-300 font-bold text-xs shadow-[0_0_15px_rgba(244,114,182,0.3)] uppercase tracking-wider">
-                        Perempuan
-                      </div>
-                    </div>
+                    {sexRatio !== null && (
+                      <span className="text-[13px] font-semibold px-3 py-1 rounded-md bg-muted text-foreground border border-border whitespace-nowrap tabular-nums">
+                        Rasio {sexRatio}:100
+                      </span>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
+                  <CardContent className="p-6 md:p-7 flex-1 flex flex-col justify-between gap-6">
+                    {totalPopulation === 0 ? (
+                      <EmptyDataState message="Data komposisi penduduk belum tersedia." />
+                    ) : (
+                      <>
+                        <div className="relative h-56 w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={genderChartData}
+                                dataKey="value"
+                                nameKey="name"
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={64}
+                                outerRadius={92}
+                                paddingAngle={3}
+                                stroke="none"
+                                isAnimationActive={!prefersReducedMotion}
+                                animationDuration={550}
+                                animationEasing="ease-out"
+                                onMouseEnter={(_, idx) => setHoveredGender(idx)}
+                                onMouseLeave={() => setHoveredGender(null)}
+                              >
+                                {genderChartData.map((entry, idx) => (
+                                  <Cell
+                                    key={entry.name}
+                                    fill={entry.color}
+                                    fillOpacity={
+                                      hoveredGender === null || hoveredGender === idx
+                                        ? 1
+                                        : 0.3
+                                    }
+                                    style={{
+                                      cursor: "pointer",
+                                      transition: "fill-opacity 150ms ease",
+                                    }}
+                                  />
+                                ))}
+                              </Pie>
+                            </PieChart>
+                          </ResponsiveContainer>
 
-              <Card className="rounded-[2.5rem] bg-white/80 dark:bg-[#0b2023]/60 backdrop-blur-md border border-black/5 dark:border-white/10 shadow-2xl overflow-hidden h-full relative group">
-                <div className="absolute bottom-0 right-0 w-64 h-64 bg-teal-600/5 dark:bg-[#3fd5ba]/5 rounded-full blur-[80px] pointer-events-none group-hover:bg-teal-600/10 dark:bg-[#3fd5ba]/10 transition-colors" />
-                <div className="p-8 md:p-10 border-b border-black/5 dark:border-white/5 relative z-10">
-                  <h3 className="font-serif font-bold text-2xl text-slate-800 dark:text-white md:text-3xl mb-2">Sebaran Usia</h3>
-                  <p className="text-slate-600 dark:text-white/40 font-light text-sm">Distribusi penduduk berdasarkan segmentasi dan kelompok usia dari balita hingga lansia.</p>
-                </div>
-                <CardContent className="space-y-10 p-8 md:p-14 relative z-10">
-                  <AgeGroup label="0-5 Tahun (Balita)" value={15} glowColor="bg-teal-500 dark:bg-[#3fd5ba]" borderColor="border-teal-300 dark:border-[#3fd5ba]" textColor="text-teal-600 dark:text-[#3fd5ba]" />
-                  <AgeGroup label="6-17 Tahun (Anak-anak)" value={25} glowColor="bg-blue-400" borderColor="border-blue-400" textColor="text-blue-400" />
-                  <AgeGroup label="18-50 Tahun (Dewasa)" value={45} glowColor="bg-purple-400" borderColor="border-purple-400" textColor="text-purple-400" />
-                  <AgeGroup label="> 50 Tahun (Lansia)" value={15} glowColor="bg-amber-400" borderColor="border-amber-400" textColor="text-amber-400" />
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
+                          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center px-4">
+                            <span className="text-[13px] font-medium text-muted-foreground">
+                              {activeGenderDatum ? activeGenderDatum.name : "Total Aktif"}
+                            </span>
+                            <span className="text-2xl font-serif font-bold text-foreground tabular-nums mt-0.5">
+                              {activeGenderDatum
+                                ? `${activeGenderDatum.percent}%`
+                                : totalPopulation.toLocaleString("id-ID")}
+                            </span>
+                            <span className="text-[13px] text-muted-foreground tabular-nums">
+                              {activeGenderDatum
+                                ? `${activeGenderDatum.value.toLocaleString("id-ID")} jiwa`
+                                : "Jiwa"}
+                            </span>
+                          </div>
+                        </div>
 
-          <TabsContent value="education">
-            <Card className="rounded-[2.5rem] bg-white/80 dark:bg-[#0b2023]/60 backdrop-blur-md border border-black/5 dark:border-white/10 shadow-2xl relative overflow-hidden group">
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-500/5 rounded-full blur-[100px] pointer-events-none group-hover:bg-purple-500/10 transition-colors" />
-              <div className="p-8 md:p-12 border-b border-black/5 dark:border-white/5 relative z-10">
-                <h3 className="font-serif font-bold text-3xl text-slate-800 dark:text-white mb-2">Tingkat Pendidikan Penduduk</h3>
-                <p className="text-slate-600 dark:text-white/40 font-light text-sm max-w-xl">Persentase tingkat pendidikan terakhir dari seluruh warga penduduk nagari sebagai acuan kemajuan SDM.</p>
-              </div>
-              <CardContent className="p-8 md:p-14 relative z-10">
-                <div className="space-y-10 max-w-4xl mx-auto">
-                  {education.map((item: any, index: number) => (
-                    <div key={index} className="space-y-4 group/item">
-                      <div className="flex justify-between items-end">
-                        <span className="font-bold text-slate-600 dark:text-white/80 text-lg group-hover/item:text-slate-800 dark:text-white transition-colors">{item.name}</span>
-                        <span className="text-3xl font-bold font-serif text-teal-600 dark:text-[#3fd5ba] group-hover/item:drop-shadow-md dark:shadow-[0_0_15px_rgba(63,213,186,0.5)] transition-all">{item.value}%</span>
-                      </div>
-                      <div className="h-5 w-full bg-white/5 rounded-full overflow-hidden p-[2px] border border-black/5 dark:border-white/10 shadow-inner">
-                         <motion.div 
-                           initial={{ width: 0 }} 
-                           whileInView={{ width: `${item.value}%` }} 
-                           viewport={{ once: true }}
-                           transition={{ duration: 1.5, ease: "easeOut", delay: index * 0.1 }}
-                           className="h-full bg-gradient-to-r from-purple-500 via-blue-400 to-[#3fd5ba] rounded-full relative"
-                         >
-                            <div className="absolute top-0 right-0 h-full w-2 bg-white/50 rounded-r-full" />
-                         </motion.div>
-                      </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          {genderChartData.map((item, idx) => {
+                            const isHighlighted = hoveredGender === idx;
+                            const isDimmed = hoveredGender !== null && hoveredGender !== idx;
+                            return (
+                              <button
+                                key={item.name}
+                                type="button"
+                                onMouseEnter={() => setHoveredGender(idx)}
+                                onMouseLeave={() => setHoveredGender(null)}
+                                onFocus={() => setHoveredGender(idx)}
+                                onBlur={() => setHoveredGender(null)}
+                                className={`text-left p-4 rounded-xl border transition-all duration-150 ${
+                                  isHighlighted
+                                    ? "bg-muted border-foreground/25"
+                                    : "bg-muted/40 border-border hover:bg-muted/70"
+                                } ${isDimmed ? "opacity-60" : "opacity-100"}`}
+                              >
+                                <div className="flex items-center gap-2 mb-1.5">
+                                  <span
+                                    aria-hidden="true"
+                                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                                    style={{ backgroundColor: item.color }}
+                                  />
+                                  <span className="text-[13px] font-medium text-muted-foreground">
+                                    {item.name}
+                                  </span>
+                                </div>
+                                <p className="text-xl font-serif font-bold text-foreground tabular-nums leading-tight">
+                                  {item.value.toLocaleString("id-ID")}
+                                </p>
+                                <p className="text-[13px] font-semibold text-muted-foreground tabular-nums mt-0.5">
+                                  {item.percent}% dari total
+                                </p>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Age Groups Breakdown */}
+                <Card className="lg:col-span-7 bg-card border border-border rounded-2xl flex flex-col">
+                  <div className="p-6 md:p-7 border-b border-border flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <div>
+                      <h2 className="font-serif font-bold text-xl md:text-2xl text-foreground">
+                        Sebaran Kelompok Usia
+                      </h2>
+                      <p className="text-muted-foreground text-sm mt-1">
+                        Distribusi warga berdasarkan rentang umur pada basis data kependudukan.
+                      </p>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                    {ageInsights.productivePercent !== null && (
+                      <div className="px-3.5 py-2 rounded-xl bg-muted/60 border border-border shrink-0">
+                        <p className="text-[13px] text-muted-foreground">
+                          Usia Produktif (18–59)
+                        </p>
+                        <p className="text-lg font-serif font-bold text-foreground tabular-nums">
+                          {ageInsights.productivePercent}%
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <CardContent className="p-6 md:p-7 flex-1 flex flex-col justify-center">
+                    {ageGroups.length === 0 ? (
+                      <EmptyDataState message="Rincian sebaran kelompok usia belum dipublikasikan untuk nagari ini." />
+                    ) : (
+                      <div className="space-y-5">
+                        {ageGroups.map((group, idx) => {
+                          const isDominant =
+                            ageInsights.dominant?.label === group.label;
+                          const accent = accentByIndex(idx);
+                          return (
+                            <AnimatedBarRow
+                              key={group.label}
+                              label={group.label}
+                              badge={isDominant ? "Kelompok Terbesar" : undefined}
+                              badgeClass={accent.chip}
+                              valueLabel={`${group.count.toLocaleString("id-ID")} jiwa (${group.value}%)`}
+                              percent={group.value}
+                              barClass={accent.edge}
+                              index={idx}
+                              reducedMotion={prefersReducedMotion}
+                            />
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
 
-          <TabsContent value="jobs">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
-              <Card className="rounded-[2.5rem] bg-white/80 dark:bg-[#0b2023]/60 backdrop-blur-md border border-black/5 dark:border-white/10 shadow-2xl relative overflow-hidden">
-                <div className="absolute bottom-0 right-0 w-64 h-64 bg-yellow-500/5 rounded-full blur-[80px] pointer-events-none" />
-                <div className="p-8 md:p-10 border-b border-black/5 dark:border-white/5 relative z-10">
-                  <h3 className="font-serif font-bold text-2xl md:text-3xl text-slate-800 dark:text-white mb-2">Profesi Penduduk</h3>
-                  <p className="text-slate-600 dark:text-white/40 font-light text-sm">Distribusi mayoritas mata pencaharian warga.</p>
-                </div>
-                <CardContent className="p-8 md:p-12 relative z-10">
-                  <div className="space-y-4">
-                    {jobs.map((job: any, index: number) => (
-                      <div key={index} className="flex items-center gap-5 p-5 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors border border-black/5 dark:border-white/5 hover:border-black/5 dark:border-white/10 shadow-sm group">
-                        <div className="w-5 h-5 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.2)] ring-4 ring-white/10" style={{ backgroundColor: job.color }} />
-                        <span className="flex-1 text-lg font-bold text-slate-600 dark:text-white/80 group-hover:text-slate-800 dark:text-white transition-colors">{job.name}</span>
-                        <div className="relative">
-                          <div className="absolute inset-0 opacity-20 blur-sm rounded-lg" style={{ backgroundColor: job.color }} />
-                          <span className="font-bold text-xl px-4 py-2 rounded-xl relative z-10" style={{ color: job.color, backgroundColor: 'rgba(255,255,255,0.05)' }}>{job.value}%</span>
+            {/* TAB 2: TINGKAT PENDIDIKAN */}
+            {activeTab === "education" && (
+              <motion.div
+                key="education"
+                role="tabpanel"
+                id="panel-education"
+                aria-labelledby="tab-education"
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={prefersReducedMotion ? undefined : { opacity: 0, y: -4 }}
+                transition={{ duration: 0.2, ease: EASE_UI }}
+                className="space-y-6"
+              >
+                {education.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <InsightCard
+                      label="Kategori Terbanyak"
+                      value={eduInsights.top?.name || "—"}
+                      sub={
+                        eduInsights.top
+                          ? `${eduInsights.top.count.toLocaleString("id-ID")} jiwa (${eduInsights.top.value}%)`
+                          : undefined
+                      }
+                      accentIndex={0}
+                    />
+                    <InsightCard
+                      label="Pendidikan Tinggi (D1–S3)"
+                      value={`${eduInsights.higherEdCount.toLocaleString("id-ID")} jiwa`}
+                      sub={`${eduInsights.higherEdPercent}% dari warga tercatat`}
+                      accentIndex={1}
+                    />
+                    <InsightCard
+                      label="Total Data Pendidikan"
+                      value={`${eduInsights.totalCount.toLocaleString("id-ID")} jiwa`}
+                      sub={`${education.length} kategori jenjang`}
+                      accentIndex={2}
+                    />
+                  </div>
+                )}
+
+                <Card className="bg-card border border-border rounded-2xl">
+                  <div className="p-6 md:p-7 border-b border-border">
+                    <h2 className="font-serif font-bold text-xl md:text-2xl text-foreground">
+                      Peringkat Tingkat Pendidikan Penduduk
+                    </h2>
+                    <p className="text-muted-foreground text-sm mt-1">
+                      Panjang batang diskalakan terhadap kategori terbesar agar perbandingan antar jenjang mudah dibaca.
+                    </p>
+                  </div>
+                  <CardContent className="p-6 md:p-7">
+                    {education.length === 0 ? (
+                      <EmptyDataState message="Data statistik tingkat pendidikan belum dipublikasikan." />
+                    ) : (
+                      <div className="divide-y divide-border">
+                        {education.map((item, idx) => {
+                          const accent = accentByIndex(idx);
+                          const scaledWidth = Math.max(
+                            4,
+                            (Number(item.value || 0) / eduInsights.maxVal) * 100
+                          );
+                          const isDimmed =
+                            hoveredEdu !== null && hoveredEdu !== item.name;
+                          return (
+                            <div
+                              key={item.name}
+                              onMouseEnter={() => setHoveredEdu(item.name)}
+                              onMouseLeave={() => setHoveredEdu(null)}
+                              className={`py-4 first:pt-0 last:pb-0 transition-opacity duration-150 ${
+                                isDimmed ? "opacity-55" : "opacity-100"
+                              }`}
+                            >
+                              <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <span className="text-[13px] font-semibold text-muted-foreground tabular-nums w-6 shrink-0">
+                                    {String(idx + 1).padStart(2, "0")}
+                                  </span>
+                                  <span className="font-medium text-foreground text-sm md:text-base">
+                                    {item.name}
+                                  </span>
+                                </div>
+                                <span className="text-sm font-semibold text-foreground tabular-nums">
+                                  {item.count.toLocaleString("id-ID")} jiwa
+                                  <span className="text-muted-foreground font-medium ml-1.5">
+                                    ({item.value}%)
+                                  </span>
+                                </span>
+                              </div>
+                              <div className="pl-9">
+                                <div className="h-2.5 w-full bg-muted rounded-full overflow-hidden">
+                                  <motion.div
+                                    initial={
+                                      prefersReducedMotion ? false : { scaleX: 0 }
+                                    }
+                                    animate={{ scaleX: 1 }}
+                                    transition={{
+                                      duration: 0.48,
+                                      delay: Math.min(idx * 0.035, 0.35),
+                                      ease: EASE_ENTER,
+                                    }}
+                                    style={{
+                                      width: `${scaledWidth}%`,
+                                      transformOrigin: "left center",
+                                    }}
+                                    className={`h-full rounded-full ${accent.edge}`}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {/* TAB 3: PROFESI & PEKERJAAN */}
+            {activeTab === "jobs" && (
+              <motion.div
+                key="jobs"
+                role="tabpanel"
+                id="panel-jobs"
+                aria-labelledby="tab-jobs"
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={prefersReducedMotion ? undefined : { opacity: 0, y: -4 }}
+                transition={{ duration: 0.2, ease: EASE_UI }}
+                className="space-y-6"
+              >
+                <Card className="bg-card border border-border rounded-2xl">
+                  <div className="p-6 md:p-7 border-b border-border">
+                    <h2 className="font-serif font-bold text-xl md:text-2xl text-foreground">
+                      Profesi &amp; Mata Pencaharian Penduduk
+                    </h2>
+                    <p className="text-muted-foreground text-sm mt-1">
+                      Komposisi 5 kategori profesi utama beserta seluruh rincian pekerjaan warga tercatat.
+                    </p>
+                  </div>
+
+                  <CardContent className="p-6 md:p-7 space-y-8">
+                    {jobs.length === 0 ? (
+                      <EmptyDataState message="Data statistik pekerjaan penduduk belum dipublikasikan." />
+                    ) : (
+                      <>
+                        {/* Stacked Proportional Horizon Strip */}
+                        <div className="space-y-3">
+                          <div className="h-4 w-full rounded-full overflow-hidden flex gap-0.5 bg-muted p-0.5 border border-border">
+                            {jobSegments.map((seg, idx) => {
+                              const isDimmed =
+                                hoveredJob !== null && hoveredJob !== seg.name;
+                              return (
+                                <motion.button
+                                  key={seg.name}
+                                  type="button"
+                                  aria-label={`${seg.name}: ${seg.count.toLocaleString("id-ID")} jiwa (${seg.value}%)`}
+                                  onMouseEnter={() => setHoveredJob(seg.name)}
+                                  onMouseLeave={() => setHoveredJob(null)}
+                                  onFocus={() => setHoveredJob(seg.name)}
+                                  onBlur={() => setHoveredJob(null)}
+                                  initial={
+                                    prefersReducedMotion ? false : { scaleX: 0 }
+                                  }
+                                  animate={{ scaleX: 1 }}
+                                  transition={{
+                                    duration: 0.5,
+                                    delay: idx * 0.05,
+                                    ease: EASE_ENTER,
+                                  }}
+                                  style={{
+                                    width: `${Math.max(seg.value, 2)}%`,
+                                    transformOrigin: "left center",
+                                  }}
+                                  className={`h-full first:rounded-l-full last:rounded-r-full transition-opacity duration-150 ${seg.edgeClass} ${
+                                    isDimmed ? "opacity-30" : "opacity-100"
+                                  }`}
+                                />
+                              );
+                            })}
+                          </div>
+
+                          <div className="flex flex-wrap gap-x-5 gap-y-2 text-[13px]">
+                            {jobSegments.map((seg) => {
+                              const isHighlighted = hoveredJob === seg.name;
+                              return (
+                                <button
+                                  key={seg.name}
+                                  type="button"
+                                  onMouseEnter={() => setHoveredJob(seg.name)}
+                                  onMouseLeave={() => setHoveredJob(null)}
+                                  className={`inline-flex items-center gap-2 transition-colors ${
+                                    isHighlighted
+                                      ? "text-foreground font-semibold"
+                                      : "text-muted-foreground hover:text-foreground"
+                                  }`}
+                                >
+                                  <span
+                                    aria-hidden="true"
+                                    className={`w-2.5 h-2.5 rounded-full shrink-0 ${seg.edgeClass}`}
+                                  />
+                                  <span>{seg.name}</span>
+                                  <span className="tabular-nums font-medium">
+                                    {seg.value}%
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Interactive 2-Column Ranked Cards */}
+                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {jobs.map((job, idx) => {
+                            const accent = accentByIndex(idx);
+                            const maxJobVal = Math.max(jobs[0]?.value || 1, 1);
+                            const barWidth = Math.max(
+                              5,
+                              (Number(job.value || 0) / maxJobVal) * 100
+                            );
+                            const isHighlighted = hoveredJob === job.name;
+                            const isDimmed =
+                              hoveredJob !== null &&
+                              hoveredJob !== job.name &&
+                              !(hoveredJob === "Profesi Lainnya" && idx >= 5);
+
+                            return (
+                              <div
+                                key={job.name}
+                                onMouseEnter={() => setHoveredJob(job.name)}
+                                onMouseLeave={() => setHoveredJob(null)}
+                                className={`p-4 rounded-xl border transition-all duration-150 ${
+                                  isHighlighted
+                                    ? "bg-muted/80 border-foreground/25"
+                                    : "bg-muted/35 border-border hover:border-foreground/20"
+                                } ${isDimmed ? "opacity-55" : "opacity-100"}`}
+                              >
+                                <div className="flex items-start justify-between gap-3 mb-3">
+                                  <div className="min-w-0">
+                                    <p className="font-semibold text-foreground text-sm truncate">
+                                      {job.name}
+                                    </p>
+                                    <p className="text-[13px] text-muted-foreground tabular-nums mt-0.5">
+                                      {job.count.toLocaleString("id-ID")} jiwa
+                                    </p>
+                                  </div>
+                                  <span
+                                    className={`text-[13px] font-semibold px-2.5 py-0.5 rounded-md tabular-nums shrink-0 ${accent.chip}`}
+                                  >
+                                    {job.value}%
+                                  </span>
+                                </div>
+                                <div className="h-1.5 w-full bg-background rounded-full overflow-hidden">
+                                  <motion.div
+                                    initial={
+                                      prefersReducedMotion ? false : { scaleX: 0 }
+                                    }
+                                    animate={{ scaleX: 1 }}
+                                    transition={{
+                                      duration: 0.45,
+                                      delay: Math.min(idx * 0.03, 0.3),
+                                      ease: EASE_ENTER,
+                                    }}
+                                    style={{
+                                      width: `${barWidth}%`,
+                                      transformOrigin: "left center",
+                                    }}
+                                    className={`h-full rounded-full ${accent.edge}`}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {/* TAB 4: TRANSPARANSI APB */}
+            {activeTab === "budget" && (
+              <motion.div
+                key="budget"
+                role="tabpanel"
+                id="panel-budget"
+                aria-labelledby="tab-budget"
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={prefersReducedMotion ? undefined : { opacity: 0, y: -4 }}
+                transition={{ duration: 0.2, ease: EASE_UI }}
+                className="space-y-6"
+              >
+                {keuangan && (keuangan.totalIncome > 0 || keuangan.totalBelanja > 0) ? (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                      <InsightCard
+                        label={`Total Pendapatan APB ${keuangan.year}`}
+                        value={formatRupiah(keuangan.totalIncome)}
+                        sub={`${keuangan.incomeData.length} sumber penerimaan`}
+                        accentIndex={0}
+                      />
+                      <InsightCard
+                        label={`Total Belanja APB ${keuangan.year}`}
+                        value={formatRupiah(keuangan.totalBelanja)}
+                        sub={`${keuangan.expenseData.length} bidang prioritas`}
+                        accentIndex={1}
+                      />
+                      <InsightCard
+                        label="Pembiayaan Netto"
+                        value={formatRupiah(keuangan.financing || 0)}
+                        sub="SiLPA & pembiayaan tahun berjalan"
+                        accentIndex={2}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                      {/* Expense Donut + Interactive Legend */}
+                      <Card className="lg:col-span-6 bg-card border border-border rounded-2xl flex flex-col">
+                        <div className="p-6 md:p-7 border-b border-border flex items-start justify-between gap-3">
+                          <div>
+                            <h2 className="font-serif font-bold text-xl md:text-2xl text-foreground">
+                              Alokasi Belanja per Bidang
+                            </h2>
+                            <p className="text-muted-foreground text-sm mt-1">
+                              Proporsi belanja APB Nagari Tahun {keuangan.year}.
+                            </p>
+                          </div>
+                          <span className="w-9 h-9 rounded-lg bg-muted text-muted-foreground flex items-center justify-center shrink-0">
+                            <PieChartIcon aria-hidden="true" size={18} />
+                          </span>
+                        </div>
+                        <CardContent className="p-6 md:p-7 flex-1 flex flex-col justify-between gap-6">
+                          {expenseChartData.length === 0 ? (
+                            <EmptyDataState message="Rincian belanja per bidang belum tersedia." />
+                          ) : (
+                            <>
+                              <div className="relative h-56 w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                  <PieChart>
+                                    <Pie
+                                      data={expenseChartData}
+                                      dataKey="value"
+                                      nameKey="name"
+                                      cx="50%"
+                                      cy="50%"
+                                      innerRadius={64}
+                                      outerRadius={92}
+                                      paddingAngle={2}
+                                      stroke="none"
+                                      isAnimationActive={!prefersReducedMotion}
+                                      animationDuration={550}
+                                      animationEasing="ease-out"
+                                      onMouseEnter={(_, idx) => setHoveredExpense(idx)}
+                                      onMouseLeave={() => setHoveredExpense(null)}
+                                    >
+                                      {expenseChartData.map((entry, idx) => (
+                                        <Cell
+                                          key={entry.name}
+                                          fill={entry.color}
+                                          fillOpacity={
+                                            hoveredExpense === null || hoveredExpense === idx
+                                              ? 1
+                                              : 0.28
+                                          }
+                                          style={{
+                                            cursor: "pointer",
+                                            transition: "fill-opacity 150ms ease",
+                                          }}
+                                        />
+                                      ))}
+                                    </Pie>
+                                  </PieChart>
+                                </ResponsiveContainer>
+
+                                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+                                  <span className="text-[13px] font-medium text-muted-foreground line-clamp-1 max-w-[140px]">
+                                    {activeExpenseDatum
+                                      ? activeExpenseDatum.name
+                                      : `Total Belanja`}
+                                  </span>
+                                  <span className="text-xl font-serif font-bold text-foreground tabular-nums mt-0.5">
+                                    {activeExpenseDatum
+                                      ? `${activeExpenseDatum.percent}%`
+                                      : formatCompactRupiah(keuangan.totalBelanja)}
+                                  </span>
+                                  {activeExpenseDatum && (
+                                    <span className="text-[13px] text-muted-foreground tabular-nums">
+                                      {formatCompactRupiah(activeExpenseDatum.value)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="space-y-2">
+                                {expenseChartData.map((item, idx) => {
+                                  const isHighlighted = hoveredExpense === idx;
+                                  const isDimmed =
+                                    hoveredExpense !== null && hoveredExpense !== idx;
+                                  return (
+                                    <button
+                                      key={item.name}
+                                      type="button"
+                                      onMouseEnter={() => setHoveredExpense(idx)}
+                                      onMouseLeave={() => setHoveredExpense(null)}
+                                      onFocus={() => setHoveredExpense(idx)}
+                                      onBlur={() => setHoveredExpense(null)}
+                                      className={`w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border text-left transition-all duration-150 ${
+                                        isHighlighted
+                                          ? "bg-muted border-foreground/25"
+                                          : "bg-transparent border-transparent hover:bg-muted/50"
+                                      } ${isDimmed ? "opacity-55" : "opacity-100"}`}
+                                    >
+                                      <span className="flex items-center gap-2.5 min-w-0">
+                                        <span
+                                          aria-hidden="true"
+                                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                                          style={{ backgroundColor: item.color }}
+                                        />
+                                        <span className="text-sm font-medium text-foreground truncate">
+                                          {item.name}
+                                        </span>
+                                      </span>
+                                      <span className="text-[13px] font-semibold text-foreground tabular-nums whitespace-nowrap">
+                                        {formatCompactRupiah(item.value)} ({item.percent}%)
+                                      </span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </>
+                          )}
+                        </CardContent>
+                      </Card>
+
+                      {/* Income Sources */}
+                      <Card className="lg:col-span-6 bg-card border border-border rounded-2xl flex flex-col">
+                        <div className="p-6 md:p-7 border-b border-border">
+                          <h2 className="font-serif font-bold text-xl md:text-2xl text-foreground">
+                            Sumber Pendapatan Nagari
+                          </h2>
+                          <p className="text-muted-foreground text-sm mt-1">
+                            Rincian penerimaan APB Nagari Tahun Anggaran {keuangan.year}.
+                          </p>
+                        </div>
+                        <CardContent className="p-6 md:p-7 flex-1 flex flex-col justify-center">
+                          {keuangan.incomeData.length === 0 ? (
+                            <EmptyDataState message="Rincian sumber pendapatan belum tersedia." />
+                          ) : (
+                            <div className="space-y-5">
+                              {keuangan.incomeData.map((item, idx) => (
+                                <AnimatedBarRow
+                                  key={item.label}
+                                  label={item.label}
+                                  valueLabel={`${formatCompactRupiah(item.value)} (${item.percent}%)`}
+                                  percent={item.percent}
+                                  barClass={accentByIndex(idx).edge}
+                                  index={idx}
+                                  reducedMotion={prefersReducedMotion}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </>
+                ) : (
+                  <Card className="bg-card border border-border rounded-2xl p-10">
+                    <EmptyDataState message="Ringkasan APB Nagari belum dipublikasikan untuk tahun anggaran aktif." />
+                  </Card>
+                )}
+
+                {/* Link Card to Full Infografis */}
+                <Link href="/infografis" className="block group">
+                  <Card className="bg-card border border-border rounded-2xl transition-all duration-150 group-hover:-translate-y-0.5 group-hover:border-foreground/25 group-hover:shadow-md">
+                    <CardContent className="p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                      <div className="flex items-start gap-4 max-w-2xl">
+                        <span className="w-11 h-11 rounded-xl bg-nagari-red/10 text-nagari-red-ink flex items-center justify-center shrink-0">
+                          <Wallet aria-hidden="true" size={22} />
+                        </span>
+                        <div className="space-y-1">
+                          <h2 className="font-serif font-bold text-xl md:text-2xl text-foreground">
+                            Infografis Lengkap &amp; Rencana Kegiatan APB
+                          </h2>
+                          <p className="text-muted-foreground text-sm md:text-base leading-relaxed">
+                            Bandingkan data antar tahun anggaran dan telusuri rincian seluruh kegiatan prioritas Dana Desa di halaman Infografis APB.
+                          </p>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Data Visualization Placeholder Area */}
-              <Card className="flex flex-col relative items-center justify-center bg-slate-50/90 dark:bg-[#0a1a1c]/80 backdrop-blur-md rounded-[2.5rem] border border-dashed border-black/5 dark:border-white/20 hover:border-teal-300 dark:border-[#3fd5ba]/50 transition-colors group overflow-hidden">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-teal-600/5 dark:bg-[#3fd5ba]/5 rounded-full blur-[80px] pointer-events-none group-hover:bg-teal-600/10 dark:bg-[#3fd5ba]/10 transition-colors duration-700" />
-                <div className="text-center p-12 relative z-10">
-                  <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-8 border border-black/5 dark:border-white/10 group-hover:scale-110 transition-transform duration-500 group-hover:shadow-[0_0_30px_rgba(63,213,186,0.2)]">
-                    <PieChart size={40} className="text-teal-600/50 dark:text-[#3fd5ba]/50 group-hover:text-teal-600 dark:text-[#3fd5ba] transition-colors" />
-                  </div>
-                  <h3 className="text-2xl font-bold font-serif text-slate-800 dark:text-white mb-4">Grafik 3D Interaktif</h3>
-                  <p className="text-slate-600 dark:text-white/40 max-w-sm mx-auto font-light leading-relaxed">
-                    Visualisasi Doughnut & Polygon interaktif akan dirender menggunakan library WebGL/ECharts dari backend SINTA API pada rilis berikutnya.
-                  </p>
-                </div>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="budget">
-            <Card className="rounded-[2.5rem] bg-white/80 dark:bg-[#0b2023]/60 backdrop-blur-md border border-black/5 dark:border-white/10 shadow-2xl relative overflow-hidden group">
-               <div className="absolute -top-32 -left-32 w-64 h-64 bg-green-500/10 rounded-full blur-[100px] pointer-events-none group-hover:bg-green-500/15 transition-colors" />
-              <div className="p-8 md:p-12 border-b border-black/5 dark:border-white/5 relative z-10">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                    <div>
-                        <h3 className="font-serif font-bold text-3xl text-slate-800 dark:text-white mb-2">Realisasi APB Nagari 2025</h3>
-                        <p className="text-slate-600 dark:text-white/40 font-light text-sm max-w-xl">Laporan penyerapan porsi Anggaran Pendapatan dan Belanja Nagari sesuai standar transparansi publik.</p>
-                    </div>
-                    <div className="bg-teal-600/10 dark:bg-[#3fd5ba]/10 text-teal-600 dark:text-[#3fd5ba] border border-teal-300 dark:border-[#3fd5ba]/30 shadow-[0_0_15px_rgba(63,213,186,0.2)] px-5 py-2.5 rounded-2xl font-bold text-xs uppercase tracking-widest flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-teal-500 dark:bg-[#3fd5ba] animate-pulse" /> Tahun Berjalan
-                    </div>
-                </div>
-              </div>
-              <CardContent className="space-y-10 p-8 md:p-14 relative z-10">
-                <BudgetBar label="Bidang Penyelenggaraan Pemerintahan Desa" value={95} color="bg-blue-400" />
-                <BudgetBar label="Bidang Pembangunan Dan Infrastruktur Desa" value={80} color="bg-teal-500 dark:bg-[#3fd5ba]" />
-                <BudgetBar label="Bidang Pembinaan Kemasyarakatan" value={60} color="bg-rose-400" />
-                <BudgetBar label="Bidang Pemberdayaan Ekonomi Masyarakat" value={45} color="bg-amber-400" />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                      <Button
+                        type="button"
+                        className="bg-nagari-red text-white hover:bg-nagari-red-ink rounded-lg h-11 px-5 text-sm font-medium whitespace-nowrap active:scale-[0.985]"
+                      >
+                        Buka Infografis APB
+                        <ChevronRight
+                          aria-hidden="true"
+                          size={16}
+                          className="ml-1.5 transition-transform duration-150 group-hover:translate-x-[3px]"
+                        />
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </section>
       </div>
       <Footer />
     </PageBackground>
   );
 }
 
-function StatCard({ title, value, icon: Icon, description, trend, color, bgColor, borderColor, glowColor }: any) {
-  return (
-    <motion.div 
-        whileHover={{ y: -5, scale: 1.02 }}
-        transition={{ type: "spring", stiffness: 300 }}
-        className="h-full"
+function MetricTile({
+  title,
+  value,
+  unit,
+  caption,
+  icon: Icon,
+  accentIndex,
+  delay,
+  reducedMotion,
+  onClick,
+}: {
+  title: string;
+  value: string;
+  unit?: string;
+  caption?: string;
+  icon: React.ComponentType<{ size?: number; "aria-hidden"?: boolean }>;
+  accentIndex: number;
+  delay: number;
+  reducedMotion: boolean;
+  onClick?: () => void;
+}) {
+  const accent = accentByIndex(accentIndex);
+  const interactive = Boolean(onClick);
+
+  const inner = (
+    <div
+      className={`h-full rounded-2xl bg-card border border-border overflow-hidden flex flex-col justify-between text-left transition-all duration-150 ${
+        interactive
+          ? "group hover:-translate-y-0.5 hover:border-foreground/25 hover:shadow-md cursor-pointer"
+          : ""
+      }`}
     >
-        <Card className={`bg-white/80 dark:bg-[#0b2023]/80 backdrop-blur-md border ${borderColor} shadow-lg hover:shadow-[0_0_20px_${glowColor}] transition-all duration-300 rounded-[2rem] overflow-hidden h-full relative group`}>
-        <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none" />
-        <CardContent className="p-8 relative z-10">
-            <div className="flex items-start justify-between mb-8">
-            <div className={`w-14 h-14 rounded-2xl border ${borderColor} ${bgColor} ${color} flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform duration-500`}>
-                <Icon size={26} strokeWidth={1.5} />
-            </div>
-            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest bg-green-500/10 text-green-400 px-3 py-1.5 rounded-full border border-green-500/20 shadow-[0_0_10px_rgba(74,222,128,0.1)]">
-                <ArrowUpRight size={12} strokeWidth={3} /> {trend}
-            </div>
-            </div>
-            
-            <div className="space-y-2">
-                <p className="text-[10px] font-bold text-slate-600 dark:text-white/40 uppercase tracking-[0.2em]">{title}</p>
-                <div className="flex items-baseline gap-2">
-                    <h2 className={`text-4xl font-serif font-bold ${color} drop-shadow-[0_0_10px_${glowColor}]`}>{value}</h2>
-                    <span className="text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-white/30">{description}</span>
-                </div>
-            </div>
-        </CardContent>
-        </Card>
+      <div aria-hidden="true" className={`h-1 w-full ${accent.edge}`} />
+      <div className="p-5 md:p-6 flex-1 flex flex-col justify-between gap-5">
+        <div className="flex items-start justify-between gap-2">
+          <span
+            className={`w-10 h-10 rounded-xl flex items-center justify-center ${accent.chip}`}
+          >
+            <Icon aria-hidden={true} size={20} />
+          </span>
+          {interactive && (
+            <ArrowUpRight
+              aria-hidden="true"
+              size={18}
+              className="text-muted-foreground transition-transform duration-150 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-foreground"
+            />
+          )}
+        </div>
+
+        <div>
+          <p className="text-[13px] font-medium text-muted-foreground mb-1">
+            {title}
+          </p>
+          <div className="flex items-baseline gap-1.5 flex-wrap">
+            <p className="text-2xl md:text-3xl font-serif font-bold text-foreground tabular-nums leading-tight">
+              {value}
+            </p>
+            {unit && (
+              <span className={`text-[13px] font-semibold ${accent.ink}`}>
+                {unit}
+              </span>
+            )}
+          </div>
+          {caption && (
+            <p className="text-[13px] text-muted-foreground mt-2 leading-snug">
+              {caption}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <motion.div
+      initial={reducedMotion ? false : { opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, delay, ease: EASE_ENTER }}
+      className="h-full"
+    >
+      {interactive ? (
+        <button
+          type="button"
+          onClick={onClick}
+          className="w-full h-full block rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-nagari-red"
+        >
+          {inner}
+        </button>
+      ) : (
+        inner
+      )}
     </motion.div>
   );
 }
 
-function AgeGroup({ label, value, glowColor, borderColor, textColor }: any) {
+function InsightCard({
+  label,
+  value,
+  sub,
+  accentIndex,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  accentIndex: number;
+}) {
+  const accent = accentByIndex(accentIndex);
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center text-sm">
-        <span className="font-bold text-slate-600 dark:text-white/80">{label}</span>
-        <span className={`font-bold ${textColor} border ${borderColor} bg-white/5 px-4 py-1.5 rounded-xl shadow-inner text-sm`}>{value}%</span>
+    <Card className="bg-card border border-border rounded-2xl overflow-hidden">
+      <div aria-hidden="true" className={`h-1 w-full ${accent.edge}`} />
+      <CardContent className="p-5 md:p-6">
+        <p className="text-[13px] font-medium text-muted-foreground mb-1">
+          {label}
+        </p>
+        <p className="text-xl md:text-2xl font-serif font-bold text-foreground tabular-nums leading-snug">
+          {value}
+        </p>
+        {sub && (
+          <p className="text-[13px] text-muted-foreground mt-1.5 tabular-nums">
+            {sub}
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function AnimatedBarRow({
+  label,
+  badge,
+  badgeClass,
+  valueLabel,
+  percent,
+  barClass,
+  index,
+  reducedMotion,
+}: {
+  label: string;
+  badge?: string;
+  badgeClass?: string;
+  valueLabel: string;
+  percent: number;
+  barClass: string;
+  index: number;
+  reducedMotion: boolean;
+}) {
+  const safePercent = Math.min(100, Math.max(2, Number(percent || 0)));
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap justify-between items-center gap-2 text-sm">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="font-medium text-foreground">{label}</span>
+          {badge && (
+            <span
+              className={`text-[13px] font-semibold px-2 py-0.5 rounded-md ${
+                badgeClass || "bg-muted text-foreground"
+              }`}
+            >
+              {badge}
+            </span>
+          )}
+        </div>
+        <span className="font-semibold text-foreground tabular-nums text-right">
+          {valueLabel}
+        </span>
       </div>
-      <div className="h-4 w-full bg-white/5 rounded-full overflow-hidden p-[2px] border border-black/5 dark:border-white/5">
-        <motion.div 
-          initial={{ width: 0 }} 
-          whileInView={{ width: `${value}%` }} 
-          viewport={{ once: true }}
-          transition={{ duration: 1.5, ease: "easeOut" }}
-          className={`h-full ${glowColor} rounded-full relative shadow-[0_0_15px_${textColor}]`} 
-        >
-          <div className="absolute right-0 top-0 bottom-0 w-2 bg-white/50 rounded-full" />
-        </motion.div>
+      <div className="h-2.5 w-full bg-muted rounded-full overflow-hidden">
+        <motion.div
+          initial={reducedMotion ? false : { scaleX: 0 }}
+          animate={{ scaleX: 1 }}
+          transition={{
+            duration: 0.48,
+            delay: Math.min(index * 0.045, 0.35),
+            ease: EASE_ENTER,
+          }}
+          style={{
+            width: `${safePercent}%`,
+            transformOrigin: "left center",
+          }}
+          className={`h-full rounded-full ${barClass}`}
+        />
       </div>
     </div>
   );
 }
 
-function BudgetBar({ label, value, color }: any) {
-    return (
-        <div className="space-y-4 group/budget border-b border-black/5 dark:border-white/5 pb-8 last:border-0 last:pb-0">
-            <div className="flex justify-between text-base font-bold text-slate-600 dark:text-white/80 md:text-lg">
-              <span className="max-w-[80%] leading-snug">{label}</span>
-              <span className="font-serif text-2xl drop-shadow-md">{value}%</span>
-            </div>
-            <div className="h-5 w-full bg-white/5 rounded-full overflow-hidden shadow-inner p-[2px] border border-black/5 dark:border-white/10 group-hover/budget:border-black/5 dark:border-white/20 transition-colors">
-             <motion.div 
-                initial={{ width: 0 }}
-                whileInView={{ width: `${value}%` }}
-                viewport={{ once: true }}
-                transition={{ duration: 2, ease: "easeOut", type: "spring" }}
-                className={`h-full ${color} rounded-full relative overflow-hidden`}
-             >
-                <div className="absolute top-0 right-0 h-full w-2 bg-white/50 rounded-r-full" />
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-[100%] group-hover/budget:animate-[shimmer_2s_infinite]" />
-             </motion.div>
-            </div>
-        </div>
-    )
-}
-
-function TabTrigger({ value, children }: { value: string, children: React.ReactNode }) {
-    return (
-        <TabsTrigger 
-            value={value} 
-            className="rounded-xl px-4 md:px-8 py-3 text-xs md:text-sm font-bold uppercase tracking-widest text-slate-600 dark:text-white/60 hover:text-slate-800 dark:text-white data-[state=active]:bg-teal-500 dark:bg-[#3fd5ba] data-[state=active]:text-white dark:text-[#0a1a1c] data-[state=active]:shadow-[0_0_20px_rgba(63,213,186,0.3)] transition-all"
-        >
-            {children}
-        </TabsTrigger>
-    )
+function EmptyDataState({ message }: { message: string }) {
+  return (
+    <div className="text-center py-10">
+      <BarChart3
+        aria-hidden="true"
+        className="w-10 h-10 mx-auto text-muted-foreground mb-3"
+      />
+      <p className="text-muted-foreground text-sm md:text-base">{message}</p>
+    </div>
+  );
 }
