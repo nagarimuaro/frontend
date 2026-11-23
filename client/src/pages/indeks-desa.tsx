@@ -542,6 +542,12 @@ export default function IndeksDesa() {
     return [...dimensionRows].sort((a, b) => a.percent - b.percent)[0] ?? null;
   }, [dimensionRows]);
 
+  const dimAverage = useMemo(() => {
+    if (dimensionRows.length === 0) return null;
+    const sum = dimensionRows.reduce((acc, r) => acc + r.percent, 0);
+    return Number((sum / dimensionRows.length).toFixed(2));
+  }, [dimensionRows]);
+
   const activeDimDetail = useMemo(() => {
     if (!hoveredDim) return null;
     return dimensionRows.find((d) => d.key === hoveredDim) ?? null;
@@ -923,20 +929,20 @@ export default function IndeksDesa() {
                 {dimensionRows.length > 0 && (
                   <section
                     aria-label="Peta capaian dan rincian per dimensi"
-                    className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch"
+                    className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start"
                   >
-                    {/* Left: Radar Chart */}
+                    {/* Left: Sticky Radar Chart + Balanced Insights (Zero Dead Space) */}
                     <motion.div
                       initial={prefersReducedMotion ? false : { opacity: 0, y: 18 }}
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true, amount: 0.15 }}
                       transition={{ duration: 0.5, ease: EASE_ENTER }}
-                      className="lg:col-span-5 flex"
+                      className="lg:col-span-5 lg:sticky lg:top-24"
                     >
-                      <Card className="w-full bg-card border border-border rounded-2xl flex flex-col shadow-xs overflow-hidden">
-                        <div className="p-6 md:p-7 border-b border-border">
+                      <Card className="w-full bg-card border border-border rounded-2xl shadow-xs overflow-hidden">
+                        <div className="p-5 md:p-6 border-b border-border">
                           <div className="flex items-center justify-between gap-2">
-                            <h2 className="font-serif font-bold text-xl md:text-2xl text-foreground">
+                            <h2 className="font-serif font-bold text-xl text-foreground">
                               Peta Capaian Dimensi
                             </h2>
                             <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-muted text-muted-foreground border border-border tabular-nums">
@@ -944,103 +950,111 @@ export default function IndeksDesa() {
                               {current.jenis === "idm" ? "Pilar" : "Dimensi"}
                             </span>
                           </div>
-                          <p className="text-muted-foreground text-sm mt-1.5 leading-relaxed">
+                          <p className="text-muted-foreground text-sm mt-1 leading-relaxed">
                             Keseimbangan capaian pembangunan {tenantName} tahun {current.tahun} pada skala 0–100.
                           </p>
                         </div>
 
-                        <CardContent className="p-4 sm:p-6 flex-1 flex flex-col justify-between gap-4">
-                          <div className="w-full h-[300px] sm:h-[320px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <RadarChart
-                                cx="50%"
-                                cy="50%"
-                                outerRadius="70%"
-                                data={dimensionRows}
-                              >
-                                <defs>
-                                  <linearGradient
-                                    id="radarAreaFill"
-                                    x1="0"
-                                    y1="0"
-                                    x2="0"
-                                    y2="1"
-                                  >
-                                    <stop
-                                      offset="0%"
-                                      stopColor="#1d8680"
-                                      stopOpacity={0.38}
-                                    />
-                                    <stop
-                                      offset="100%"
-                                      stopColor="#b82026"
-                                      stopOpacity={0.14}
-                                    />
-                                  </linearGradient>
-                                </defs>
-                                <PolarGrid
-                                  stroke="hsl(var(--border))"
-                                  strokeDasharray="3 3"
-                                />
-                                <PolarAngleAxis
-                                  dataKey="short"
-                                  tick={{
-                                    fill: "hsl(var(--foreground))",
-                                    fontSize: 12,
-                                    fontWeight: 500,
-                                  }}
-                                />
-                                <PolarRadiusAxis
-                                  angle={30}
-                                  domain={[0, 100]}
-                                  tickCount={5}
-                                  tick={{
-                                    fill: "hsl(var(--muted-foreground))",
-                                    fontSize: 10,
-                                  }}
-                                  axisLine={false}
-                                />
-                                <Radar
-                                  name="Capaian"
-                                  dataKey="percent"
-                                  stroke="#1d8680"
-                                  strokeWidth={2.5}
-                                  fill="url(#radarAreaFill)"
-                                  dot={{
-                                    r: 4,
-                                    fill: "#1d8680",
-                                    stroke: "#ffffff",
-                                    strokeWidth: 2,
-                                  }}
-                                  activeDot={{
-                                    r: 6,
-                                    fill: "#b82026",
-                                    stroke: "#ffffff",
-                                    strokeWidth: 2,
-                                  }}
-                                  isAnimationActive={!prefersReducedMotion}
-                                  animationDuration={750}
-                                />
-                                <RechartsTooltip content={<CustomRadarTooltip />} />
-                              </RadarChart>
-                            </ResponsiveContainer>
+                        <CardContent className="p-5 sm:p-6 space-y-4">
+                          {/* Framed Radar Canvas */}
+                          <div className="rounded-xl bg-muted/25 border border-border/60 px-2 py-2">
+                            <div className="w-full h-[275px] sm:h-[295px]">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <RadarChart
+                                  cx="50%"
+                                  cy="50%"
+                                  outerRadius="64%"
+                                  data={dimensionRows}
+                                >
+                                  <defs>
+                                    <linearGradient
+                                      id="radarAreaFill"
+                                      x1="0"
+                                      y1="0"
+                                      x2="0"
+                                      y2="1"
+                                    >
+                                      <stop
+                                        offset="0%"
+                                        stopColor="#1d8680"
+                                        stopOpacity={0.34}
+                                      />
+                                      <stop
+                                        offset="100%"
+                                        stopColor="#0f766e"
+                                        stopOpacity={0.1}
+                                      />
+                                    </linearGradient>
+                                  </defs>
+                                  <PolarGrid
+                                    gridType="polygon"
+                                    stroke="hsl(var(--border))"
+                                    strokeOpacity={0.85}
+                                  />
+                                  <PolarAngleAxis
+                                    dataKey="short"
+                                    tick={{
+                                      fill: "hsl(var(--foreground))",
+                                      fontSize: 11.5,
+                                      fontWeight: 600,
+                                    }}
+                                  />
+                                  <PolarRadiusAxis
+                                    angle={30}
+                                    domain={[0, 100]}
+                                    tick={false}
+                                    axisLine={false}
+                                  />
+                                  <Radar
+                                    name="Capaian"
+                                    dataKey="percent"
+                                    stroke="#1d8680"
+                                    strokeWidth={2.5}
+                                    fill="url(#radarAreaFill)"
+                                    dot={{
+                                      r: 4,
+                                      fill: "#1d8680",
+                                      stroke: "#ffffff",
+                                      strokeWidth: 2,
+                                    }}
+                                    activeDot={{
+                                      r: 6,
+                                      fill: "#b82026",
+                                      stroke: "#ffffff",
+                                      strokeWidth: 2,
+                                    }}
+                                    isAnimationActive={!prefersReducedMotion}
+                                    animationDuration={700}
+                                  />
+                                  <RechartsTooltip content={<CustomRadarTooltip />} />
+                                </RadarChart>
+                              </ResponsiveContainer>
+                            </div>
                           </div>
 
-                          {/* Interactive Highlight Strip */}
-                          <div className="rounded-xl bg-muted/55 border border-border/80 px-4 py-3 flex items-center justify-between gap-3">
+                          {/* Interactive Focus / Average Banner */}
+                          <div className="rounded-xl bg-muted/50 border border-border/80 px-4 py-3 flex items-center justify-between gap-3">
                             {activeDimDetail ? (
                               <>
                                 <div className="min-w-0">
-                                  <p className="text-xs font-semibold text-foreground truncate">
+                                  <p className="text-xs font-bold text-foreground truncate">
                                     {activeDimDetail.label}
                                   </p>
                                   <p className="text-[12px] text-muted-foreground truncate">
                                     {activeDimDetail.desc}
                                   </p>
                                 </div>
-                                <span className="text-sm font-serif font-bold text-secondary-ink tabular-nums shrink-0">
-                                  {formatScore(activeDimDetail.raw, current.jenis)}
-                                </span>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <span className="text-sm font-serif font-bold text-secondary-ink tabular-nums">
+                                    {formatScore(activeDimDetail.raw, current.jenis)}
+                                  </span>
+                                  {activeDimDetail.delta !== null && (
+                                    <DeltaPill
+                                      delta={activeDimDetail.delta}
+                                      jenis={current.jenis}
+                                    />
+                                  )}
+                                </div>
                               </>
                             ) : (
                               <>
@@ -1050,14 +1064,70 @@ export default function IndeksDesa() {
                                     size={15}
                                     className="text-secondary-ink shrink-0"
                                   />
-                                  <p className="text-xs text-muted-foreground truncate">
-                                    {lowestDimension
-                                      ? `Fokus penguatan berikutnya: ${lowestDimension.short} (${formatScore(lowestDimension.raw, current.jenis)})`
-                                      : "Arahkan kursor pada dimensi untuk menyorot capaian."}
-                                  </p>
+                                  <span className="text-xs font-medium text-muted-foreground">
+                                    Rata-rata capaian seluruh dimensi
+                                  </span>
                                 </div>
+                                <span className="text-sm font-serif font-bold text-foreground tabular-nums shrink-0">
+                                  {dimAverage !== null
+                                    ? `${formatScore(dimAverage, "indeks_desa")}%`
+                                    : "—"}
+                                </span>
                               </>
                             )}
+                          </div>
+
+                          {/* Top vs Focus 2-Col Insight Cards */}
+                          {topDimension && lowestDimension && (
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/8 p-3">
+                                <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                                  Terkuat
+                                </p>
+                                <p className="text-sm font-semibold text-foreground truncate mt-1">
+                                  {topDimension.short}
+                                </p>
+                                <p className="text-lg font-serif font-bold text-emerald-700 dark:text-emerald-300 tabular-nums leading-tight mt-0.5">
+                                  {formatScore(topDimension.raw, current.jenis)}
+                                </p>
+                              </div>
+                              <div className="rounded-xl border border-amber-500/25 bg-amber-500/8 p-3">
+                                <p className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                                  Fokus Penguatan
+                                </p>
+                                <p className="text-sm font-semibold text-foreground truncate mt-1">
+                                  {lowestDimension.short}
+                                </p>
+                                <p className="text-lg font-serif font-bold text-amber-700 dark:text-amber-300 tabular-nums leading-tight mt-0.5">
+                                  {formatScore(lowestDimension.raw, current.jenis)}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Compact Quality Scale Legend */}
+                          <div className="pt-3 border-t border-border/70">
+                            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                              Panduan Kategori Mutu
+                            </p>
+                            <div className="grid grid-cols-2 gap-2 text-[11.5px]">
+                              <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                                <span>≥ 85 Sangat Baik</span>
+                              </span>
+                              <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                                <span className="w-2 h-2 rounded-full bg-sky-500 shrink-0" />
+                                <span>75–84 Baik</span>
+                              </span>
+                              <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                                <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                                <span>65–74 Cukup</span>
+                              </span>
+                              <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                                <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
+                                <span>&lt; 65 Prioritas</span>
+                              </span>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -1069,12 +1139,12 @@ export default function IndeksDesa() {
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true, amount: 0.15 }}
                       transition={{ duration: 0.5, delay: 0.08, ease: EASE_ENTER }}
-                      className="lg:col-span-7 flex"
+                      className="lg:col-span-7"
                     >
                       <Card className="w-full bg-card border border-border rounded-2xl flex flex-col shadow-xs">
-                        <div className="p-6 md:p-7 border-b border-border flex flex-wrap items-start justify-between gap-3">
+                        <div className="p-5 md:p-6 border-b border-border flex flex-wrap items-start justify-between gap-3">
                           <div>
-                            <h2 className="font-serif font-bold text-xl md:text-2xl text-foreground">
+                            <h2 className="font-serif font-bold text-xl text-foreground">
                               Rincian Skor per Dimensi
                             </h2>
                             <p className="text-muted-foreground text-sm mt-1">
@@ -1084,8 +1154,8 @@ export default function IndeksDesa() {
                           </div>
                         </div>
 
-                        <CardContent className="p-5 md:p-6 flex-1 flex flex-col justify-center">
-                          <div className="space-y-3.5">
+                        <CardContent className="p-5 md:p-6">
+                          <div className="space-y-3">
                             {dimensionRows.map((dim, idx) => {
                               const accent = accentByIndex(idx);
                               const Icon = dim.icon;
