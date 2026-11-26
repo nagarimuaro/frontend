@@ -1,20 +1,20 @@
 // API Configuration - 100% dynamic multi-tenant resolution
-// 1. Direct subdomain access (e.g. muaro.sintanagari.cloud) uses active subdomain.
+// 1. Direct subdomain access (e.g. muaro.sintanagari.site) uses active subdomain.
 // 2. Custom domains (e.g. nagarimuaro.id, nagaripulasan.id, nagaritimbulun.id, or any newly added nagari)
-//    route to the central backend API (https://sintanagari.cloud).
+//    route to the central backend API (https://sintanagari.site).
 //    The backend TenantMiddleware automatically resolves the nagari from the database
 //    via the X-Tenant-Domain header. NO frontend code edits needed when adding new nagaris!
 export const getApiBaseUrl = (): string => {
   if (typeof window !== "undefined") {
     const hostname = window.location.hostname;
     
-    if (hostname.endsWith(".sintanagari.cloud") && hostname !== "sintanagari.cloud") {
+    if (hostname.endsWith(".sintanagari.site") && hostname !== "sintanagari.site") {
       return `https://${hostname}`;
     }
   }
   
   // Central Multi-tenant Backend Gateway
-  return "https://sintanagari.cloud";
+  return "https://sintanagari.site";
 };
 
 export const API_BASE_URL = getApiBaseUrl();
